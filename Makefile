@@ -91,7 +91,6 @@ ESOLVER_MAIN_DEPS=$(addprefix $(ESOLVER_ROOT)/obj/$(BUILD_SUFFIX)/, $(ESOLVER_MA
 ESOLVER_LIB_STATIC=$(ESOLVER_ROOT)/lib/$(BUILD_SUFFIX)/libesolver.a
 ESOLVER_LIB_DYNAMIC=$(ESOLVER_ROOT)/lib/$(BUILD_SUFFIX)/libesolver.so
 SYNTHLIB2_PARSER_LIB_PH=$(ESOLVER_ROOT)/lib/$(BUILD_SUFFIX)/slparserlib.ph
-Z3_BUILD_PH=$(Z3BUILDDIR)/z3build.ph
 ESOLVER_MAIN=$(ESOLVER_ROOT)/bin/$(BUILD_SUFFIX)/esolver-synthlib
 
 default:			debug
@@ -115,7 +114,7 @@ esolver-synthlib:   $(ESOLVER_MAIN)
 
 $(ESOLVER_MAIN):    $(ESOLVER_MAIN_DEPS) $(ESOLVER_MAIN_OBJS) \
 					$(ESOLVER_LIB_STATIC) $(ESOLVER_LIB_DYNAMIC) \
-					$(SYNTHLIB2_PARSER_LIB_PH)  $(Z3_BUILD_PH)
+					$(SYNTHLIB2_PARSER_LIB_PH)
 ifeq "x$(VERBOSE_BUILD)" "x"
 	@echo "$(LDPRINTNAME) `basename $@`"; \
 	$(LD) $(OPTFLAGS) $(ESOLVER_MAIN_OBJS) $(LINKFLAGS) -Wl,-Bstatic -lsynthlib2parser \
@@ -137,7 +136,7 @@ $(ESOLVER_LIB_STATIC):		$(ESOLVER_LIB_DEPS) $(ESOLVER_LIB_OBJS)
 ifeq "x$(VERBOSE_BUILD)" "x"
 	@echo "$(ARPRINTNAME) `basename $@`"; \
 	$(AR) $(ARFLAGS) $@ $(ESOLVER_LIB_OBJS)
-else 
+else
 	$(AR) $(ARFLAGS) $@ $(ESOLVER_LIB_OBJS)
 endif
 
@@ -148,7 +147,7 @@ ifeq "x$(VERBOSE_BUILD)" "x"
 	$(CXX) -MM $(CXXFLAGS) $< > $@.$$$$; \
     sed 's,\($*\)\.o[ :]*,$(OBJ_DIR)/\1.o $@ : ,g' < $@.$$$$ > $@; \
 	rm -f $@.$$$$
-else 
+else
 	@set -e; rm -f $@; \
 	echo "Calculating dependencies for `basename $<`..."; \
 	$(CXX) -MM $(CXXFLAGS) $< > $@.$$$$; \
@@ -170,15 +169,6 @@ $(SYNTHLIB2_PARSER_LIB_PH):
 	   $(ESOLVER_ROOT)/src/synthlib2parser/lib/$(BUILD_SUFFIX)/libsynthlib2parser.a \
 	   $(ESOLVER_ROOT)/lib/$(BUILD_SUFFIX)
 	touch $(SYNTHLIB2_PARSER_LIB_PH)
-
-$(Z3_BUILD_PH):
-	cd $(ESOLVER_ROOT)/src/z3-4.3.1; \
-	autoconf; \
-	./configure; \
-	python scripts/mk_make.py; \
-	cd build; \
-	$(MAKE); \
-	touch $@
 
 .PHONY:	clean distclean
 
@@ -205,7 +195,6 @@ distclean:
 	rm -rf bin/opt/*
 	rm -rf bin/prof/*
 	$(MAKE) $(MAKECMDGOALS) -C $(ESOLVER_ROOT)/src/synthlib2parser
-	cd $(Z3BUILDDIR); rm -rf *
 
 ifneq ($(MAKECMDGOALS), clean)
 ifneq ($(MAKECMDGOALS), distclean)

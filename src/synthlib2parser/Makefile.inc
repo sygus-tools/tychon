@@ -45,6 +45,8 @@ CC=$(CXX)
 LD=$(CXX)
 CXXFLAGS+=-Wall -pedantic -Wno-write-strings -Wno-unused-function -D__STDC_LIMIT_MACROS
 CXXFLAGS+=-pipe -std=c++11
+CXXFLAGS+= -I $(HOME)/prefix/include
+LINKFLAGS+=-L $(HOME)/prefix/lib
 CXXFLAGS+=$(FEAT_FLAGS)
 AR=ar
 ARFLAGS=rcs

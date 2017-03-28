@@ -55,9 +55,11 @@ CXX=g++
 CC=$(CXX)
 LD=$(CXX)
 CXXFLAGS+=-Wall -pedantic -D__STDC_LIMIT_MACROS -DDISABLE_STATIC_BP
-CXXFLAGS+=-I $(Z3DIR)/src/api/
+#CXXFLAGS+=-I $(Z3DIR)/src/api/
+CXXFLAGS+= -I $(HOME)/prefix/include
 CXXFLAGS+=-pipe -std=c++11
-LINKFLAGS+=-L $(Z3BUILDDIR) -L $(ESOLVER_ROOT)/lib/$(BUILD_SUFFIX)
+#LINKFLAGS+=-L $(Z3BUILDDIR) -L $(ESOLVER_ROOT)/lib/$(BUILD_SUFFIX)
+LINKFLAGS+=-L $(HOME)/prefix/lib -L $(ESOLVER_ROOT)/lib/$(BUILD_SUFFIX)
 LINKFLAGS+=-Wl,-Bstatic -lesolver -Wl,-Bstatic $(Z3LIBLINK) -Wl,-Bdynamic -lrt
 LINKFLAGS+=-lboost_program_options -lboost_system -fopenmp
 CXXFLAGS+=$(FEAT_FLAGS)
