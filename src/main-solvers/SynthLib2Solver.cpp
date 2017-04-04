@@ -42,6 +42,7 @@
 #include "../descriptions/Grammar.hpp"
 #include "../common/ESolverOpts.hpp"
 #include "../solvers/CEGSolver.hpp"
+#include "synthlib2parser/SymbolTable.hpp"
 
 using namespace SynthLib2Parser;
 
@@ -52,13 +53,14 @@ namespace ESolver {
         throw SynthLib2Exception(Loc.GetLineNum(), Loc.GetColNum(), Ex.what());
     }
 
-    SynthLib2ESolver::SynthLib2ESolver(ESolver* Solver)
+    SynthLib2ESolver::SynthLib2ESolver(ESolver* Solver, const SymbolTable* SymTab)
         : ASTVisitorBase("SynthLib2ESolver"),
           InFunDef(false),
           InSynthFun(false),
           InSortDef(false),
           InConstraintCmd(false),
-          Solver(Solver)
+          Solver(Solver),
+          TheSymbolTable(SymTab)
     {
         // Nothing here
     }
@@ -478,7 +480,7 @@ namespace ESolver {
     void SynthLib2ESolver::VisitLiteralTerm(const LiteralTerm* TheTerm)
     {
         auto TheLit = TheTerm->GetLiteral();
-        TheLit->GetSort()->Accept(this);
+        TheLit->GetSort(this->TheSymbolTable)->Accept(this);
         auto Type = SortStack.back();
         SortStack.pop_back();
         auto Val = Solver->CreateValue(Type, TheLit->GetLiteralString());
@@ -528,7 +530,7 @@ namespace ESolver {
     {
         auto Lit = TheTerm->GetLiteral();
         auto const& LitString = Lit->GetLiteralString();
-        auto LitType = Lit->GetSort();
+        auto LitType = Lit->GetSort(this->TheSymbolTable);
         LitType->Accept(this);
         auto Type = SortStack.back();
         SortStack.pop_back();
@@ -642,9 +644,9 @@ namespace ESolver {
     void SynthLib2ESolver::Solve(const string& InFileName, const ESolverOpts& Opts)
     {
         ESolver* Solver = new CEGSolver(&Opts);
-        SynthLib2ESolver SL2ESolver(Solver);
         SynthLib2Parser::SynthLib2Parser Parser;
         Parser(InFileName);
+        SynthLib2ESolver SL2ESolver(Solver, Parser.GetSymbolTable());
         Parser.GetProgram()->Accept(&SL2ESolver);
         delete Solver;
         return;

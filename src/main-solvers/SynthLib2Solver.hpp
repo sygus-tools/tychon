@@ -1,13 +1,13 @@
-// SynthLib2Solver.hpp --- 
-// 
+// SynthLib2Solver.hpp ---
+//
 // Filename: SynthLib2Solver.hpp
 // Author: Abhishek Udupa
 // Created: Fri Jan 10 04:23:32 2014 (-0500)
-// 
-// 
+//
+//
 // Copyright (c) 2013, Abhishek Udupa, University of Pennsylvania
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 // 1. Redistributions of source code must retain the above copyright
@@ -21,7 +21,7 @@
 // 4. Neither the name of the University of Pennsylvania nor the
 //    names of its contributors may be used to endorse or promote products
 //    derived from this software without specific prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER ''AS IS'' AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 // WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -32,17 +32,17 @@
 // ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-// 
-// 
+//
+//
 
 // Code:
 
 
 #if !defined __ESOLVER_SYNTH_LIB2_SOLVER_HPP
-#define __ESOLVER_SYNTH_LIB2_SOLVER_HPP 
+#define __ESOLVER_SYNTH_LIB2_SOLVER_HPP
 
 #include "../common/ESolverForwardDecls.hpp"
-#include "../synthlib2parser/src/include/SynthLib2ParserIFace.hpp"
+#include "synthlib2parser/SynthLib2ParserIFace.hpp"
 #include "../utils/Hashers.hpp"
 #include "../utils/UIDGenerator.hpp"
 
@@ -86,11 +86,11 @@ namespace ESolver {
         ESolver* Solver;
         vector<map<string, Expression>> LetVarExpressionStack;
         vector<map<Expression, Expression>> LetVarBindingStack;
-
+        const SynthLib2Parser::SymbolTable* TheSymbolTable;
         Expression GetVarExpression(const string& VarName);
 
     public:
-        SynthLib2ESolver(ESolver* Solver);
+        SynthLib2ESolver(ESolver* Solver, const SynthLib2Parser::SymbolTable* SymTab);
         virtual ~SynthLib2ESolver();
 
         // Visit methods
@@ -136,5 +136,5 @@ namespace ESolver {
 #endif /* __ESOLVER_SYNTH_LIB2_SOLVER_HPP */
 
 
-// 
+//
 // SynthLib2Solver.hpp ends here

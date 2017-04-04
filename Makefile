@@ -90,7 +90,6 @@ ESOLVER_MAIN_DEPS=$(addprefix $(ESOLVER_ROOT)/obj/$(BUILD_SUFFIX)/, $(ESOLVER_MA
 
 ESOLVER_LIB_STATIC=$(ESOLVER_ROOT)/lib/$(BUILD_SUFFIX)/libesolver.a
 ESOLVER_LIB_DYNAMIC=$(ESOLVER_ROOT)/lib/$(BUILD_SUFFIX)/libesolver.so
-SYNTHLIB2_PARSER_LIB_PH=$(ESOLVER_ROOT)/lib/$(BUILD_SUFFIX)/slparserlib.ph
 ESOLVER_MAIN=$(ESOLVER_ROOT)/bin/$(BUILD_SUFFIX)/esolver-synthlib
 
 default:			debug
@@ -108,13 +107,13 @@ fullltoprof:		all
 
 all:				esolverlib esolver-synthlib
 
-esolverlib:			$(ESOLVER_LIB_STATIC) $(ESOLVER_LIB_DYNAMIC) $(SYNTHLIB2_PARSER_LIB_PH)
+esolverlib:			$(ESOLVER_LIB_STATIC) $(ESOLVER_LIB_DYNAMIC)
 
 esolver-synthlib:   $(ESOLVER_MAIN)
 
 $(ESOLVER_MAIN):    $(ESOLVER_MAIN_DEPS) $(ESOLVER_MAIN_OBJS) \
-					$(ESOLVER_LIB_STATIC) $(ESOLVER_LIB_DYNAMIC) \
-					$(SYNTHLIB2_PARSER_LIB_PH)
+					$(ESOLVER_LIB_STATIC) $(ESOLVER_LIB_DYNAMIC)
+
 ifeq "x$(VERBOSE_BUILD)" "x"
 	@echo "$(LDPRINTNAME) `basename $@`"; \
 	$(LD) $(OPTFLAGS) $(ESOLVER_MAIN_OBJS) $(LINKFLAGS) -Wl,-Bstatic -lsynthlib2parser \
@@ -163,13 +162,6 @@ else
 	$(CXX) $(CXXFLAGS) $(OPTFLAGS) -c $< -o $@
 endif
 
-$(SYNTHLIB2_PARSER_LIB_PH):
-	$(MAKE) $(MAKECMDGOALS) -C $(ESOLVER_ROOT)/src/synthlib2parser
-	cp $(ESOLVER_ROOT)/src/synthlib2parser/lib/$(BUILD_SUFFIX)/libsynthlib2parser.so \
-	   $(ESOLVER_ROOT)/src/synthlib2parser/lib/$(BUILD_SUFFIX)/libsynthlib2parser.a \
-	   $(ESOLVER_ROOT)/lib/$(BUILD_SUFFIX)
-	touch $(SYNTHLIB2_PARSER_LIB_PH)
-
 .PHONY:	clean distclean
 
 clean:
@@ -182,7 +174,6 @@ clean:
 	rm -rf bin/debug/*
 	rm -rf bin/opt/*
 	rm -rf bin/prof/*
-	$(MAKE) $(MAKECMDGOALS) -C $(ESOLVER_ROOT)/src/synthlib2parser
 
 distclean:
 	rm -rf obj/debug/*
@@ -194,7 +185,7 @@ distclean:
 	rm -rf bin/debug/*
 	rm -rf bin/opt/*
 	rm -rf bin/prof/*
-	$(MAKE) $(MAKECMDGOALS) -C $(ESOLVER_ROOT)/src/synthlib2parser
+
 
 ifneq ($(MAKECMDGOALS), clean)
 ifneq ($(MAKECMDGOALS), distclean)
