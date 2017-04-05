@@ -1,5 +1,6 @@
 # Standard .gitignore for C++
 .idea
+src/synthlib2parser
 
 # Prerequisites
 *.d
