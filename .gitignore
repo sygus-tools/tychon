@@ -1,4 +1,5 @@
 # Standard .gitignore for C++
+.idea
 
 # Prerequisites
 *.d
