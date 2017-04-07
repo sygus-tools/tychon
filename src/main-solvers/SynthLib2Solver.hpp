@@ -90,7 +90,8 @@ namespace ESolver {
         Expression GetVarExpression(const string& VarName);
 
     public:
-        SynthLib2ESolver(ESolver* Solver, const SynthLib2Parser::SymbolTable* SymTab);
+        SynthLib2ESolver(ESolver* Solver,
+                         const SynthLib2Parser::SynthLib2Parser& Parser);
         virtual ~SynthLib2ESolver();
 
         // Visit methods

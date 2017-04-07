@@ -53,14 +53,15 @@ namespace ESolver {
         throw SynthLib2Exception(Loc.GetLineNum(), Loc.GetColNum(), Ex.what());
     }
 
-    SynthLib2ESolver::SynthLib2ESolver(ESolver* Solver, const SymbolTable* SymTab)
+    SynthLib2ESolver::SynthLib2ESolver(ESolver* Solver,
+                                       const SynthLib2Parser::SynthLib2Parser& Parser)
         : ASTVisitorBase("SynthLib2ESolver"),
           InFunDef(false),
           InSynthFun(false),
           InSortDef(false),
           InConstraintCmd(false),
           Solver(Solver),
-          TheSymbolTable(SymTab)
+          TheSymbolTable(Parser.GetSymbolTable())
     {
         // Nothing here
     }
@@ -646,7 +647,7 @@ namespace ESolver {
         ESolver* Solver = new CEGSolver(&Opts);
         SynthLib2Parser::SynthLib2Parser Parser;
         Parser(InFileName);
-        SynthLib2ESolver SL2ESolver(Solver, Parser.GetSymbolTable());
+        SynthLib2ESolver SL2ESolver(Solver, Parser);
         Parser.GetProgram()->Accept(&SL2ESolver);
         delete Solver;
         return;

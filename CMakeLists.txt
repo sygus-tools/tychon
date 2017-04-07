@@ -35,7 +35,7 @@ set(CMAKE_CXX_FLAGS "-Wall -pedantic -Wno-write-strings\
  FORCE
 )
 
-include_directories(${CMAKE_SOURCE_DIR}/src/include ${Boost_INCLUDE_DIRS})
+include_directories(${Boost_INCLUDE_DIRS})
 link_directories(${synthlib_output_path} ${Boost_LIBRARY_DIRS})
 
 set(CMAKE_CXX_FLAGS_DEBUG "-ggdb3 -O0 -fno-inline" CACHE STRING
@@ -117,11 +117,11 @@ set(main_source_file
 )
 
 add_library(synthlib2parser STATIC IMPORTED)
-add_library(z3 STATIC IMPORTED)
+add_library(z3 SHARED IMPORTED)
 
 #set(CMAKE_FIND_LIBRARY_SUFFIXES ".a;.so")
 find_library(synthlib2parser-lib NAMES "libsynthlib2parser.a")
-find_library(z3-lib NAMES "libz3.a")
+find_library(z3-lib NAMES "libz3.so")
 
 set_target_properties(synthlib2parser PROPERTIES
   IMPORTED_LOCATION ${synthlib2parser-lib}
