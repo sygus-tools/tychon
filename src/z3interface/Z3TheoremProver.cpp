@@ -70,12 +70,11 @@ namespace ESolver {
         Z3_config Config = Z3_mk_config();
         for(SMTSolverParams::const_iterator it = Params.begin();
             it != Params.end(); ++it) {
-            Z3_set_param_value(Config, (it->first).c_str(), (it->second).c_str());
+            Z3_global_param_set((it->first).c_str(), (it->second).c_str());
         }
 
         // Add model completion if not already done
-        Z3_set_param_value(Config, "MODEL", "true");
-        Z3_set_param_value(Config, "MODEL_COMPLETION", "true");
+        Z3_global_param_set("model", "true");
 
         TheContext = Z3_mk_context_rc(Config);
         Z3_del_config(Config);

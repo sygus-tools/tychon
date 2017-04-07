@@ -92,7 +92,7 @@ namespace ESolver {
         CheckOpts(Opts);
 
         SMTSolverParams Params;
-        Params["RANDOM_SEED"] = to_string(Opts->RandomSeed);
+        Params["sat.random_seed"] = to_string(Opts->RandomSeed);
         TheLogger.Log1("Using Random Seed: ").Log1(Opts->RandomSeed).Log1("\n");
 
         TP = new Z3TheoremProver(Params);
