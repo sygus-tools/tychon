@@ -325,7 +325,7 @@ namespace ESolver {
         do {
             Restart = false;
             for (uint32 i = NumSynthFuncs; i <= Opts.CostBudget && !Complete; ++i) {
-                if (Opts.StatsLevel >= 1) {
+                if (Opts.StatsLevel >= 2) {
                     TheLogger.Log1("Trying expressions of size ").Log1(i).Log1("\n");
                 }
                 ExpEnumerator->EnumerateOfCost(i);
@@ -334,8 +334,10 @@ namespace ESolver {
                     break;
                 }
             }
-            if (Restart && Opts.StatsLevel >= 1) {
-                TheLogger.Log1("Restarting enumeration... (").Log1(++NumRestarts).Log1(")\n");
+            if (Restart && Opts.StatsLevel >= 1)
+                ++NumRestarts;
+            if (Restart && Opts.StatsLevel >= 2){
+                TheLogger.Log1("Restarting enumeration... (").Log1(NumRestarts).Log1(")\n");
             }
         } while (Restart && !Complete);
         // We're done
