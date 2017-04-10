@@ -27,7 +27,7 @@ endif()
 ## compiler flags #########################################################
 ###############################################################################
 
-set(synthlib_output_path ${CMAKE_SOURCE_DIR}/lib/${CMAKE_BUILD_TYPE})
+set(esolverlib_output_path ${CMAKE_SOURCE_DIR}/lib/${CMAKE_BUILD_TYPE})
 
 set(CMAKE_CXX_FLAGS "-Wall -pedantic -Wno-write-strings\
  -Wno-unused-function -D__STDC_LIMIT_MACROS -DDISABLE_STATIC_BP -pipe -std=c++11"
@@ -36,7 +36,7 @@ set(CMAKE_CXX_FLAGS "-Wall -pedantic -Wno-write-strings\
 )
 
 include_directories(${Boost_INCLUDE_DIRS})
-link_directories(${synthlib_output_path} ${Boost_LIBRARY_DIRS})
+link_directories(${Boost_LIBRARY_DIRS})
 
 set(CMAKE_CXX_FLAGS_DEBUG "-ggdb3 -O0 -fno-inline" CACHE STRING
     "Flags used by the C++ compiler during debug builds."
@@ -119,9 +119,9 @@ set(main_source_file
 add_library(synthlib2parser STATIC IMPORTED)
 add_library(z3 SHARED IMPORTED)
 
-#set(CMAKE_FIND_LIBRARY_SUFFIXES ".a;.so")
-find_library(synthlib2parser-lib NAMES "libsynthlib2parser.a")
-find_library(z3-lib NAMES "libz3.so")
+set(CMAKE_FIND_LIBRARY_SUFFIXES ".a;.so")
+find_library(synthlib2parser-lib NAMES "synthlib2parser")
+find_library(z3-lib NAMES "z3")
 
 set_target_properties(synthlib2parser PROPERTIES
   IMPORTED_LOCATION ${synthlib2parser-lib}
@@ -132,9 +132,7 @@ set_target_properties(z3 PROPERTIES
 )
 
 add_library(esolverlib-static STATIC ${esolverlib_sources})
-add_executable(esolver
-  ${main_source_file}
-)
+add_executable(esolver ${main_source_file})
 
 set_target_properties(esolverlib-static PROPERTIES
   OUTPUT_NAME esolverlib
@@ -142,7 +140,7 @@ set_target_properties(esolverlib-static PROPERTIES
 )
 
 set_target_properties(esolverlib-static PROPERTIES
-  ARCHIVE_OUTPUT_DIRECTORY ${synthlib_output_path}
+  ARCHIVE_OUTPUT_DIRECTORY ${esolverlib_output_path}
 )
 
 set_target_properties(esolver PROPERTIES
