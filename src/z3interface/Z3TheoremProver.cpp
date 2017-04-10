@@ -795,25 +795,10 @@ namespace ESolver {
     static inline string ParseZ3BVString(const string& BVString,
                                          const ESFixedTypeBase* Type)
     {
-        string NumString;
-        string NumBitsString;
-        string WorkString = BVString.substr(2, BVString.length() - 2);
-        ostringstream sstr;
-
-        uint32 i = 0;
-
-        while(WorkString[i] != '[') {
-            NumString += WorkString[i];
-            i++;
-        }
-
-        i++;
-        while(WorkString[i] != ']') {
-            NumBitsString += WorkString[i];
-            i++;
-        }
-
-        uint32 NumBits = atoi(NumBitsString.c_str());
+        char * TempPtr;
+        unsigned long res = std::strtoul(BVString.c_str()+2, &TempPtr, 16);
+        string NumString = std::to_string(res);
+        uint32 NumBits = (BVString.length()-2) * 4;
 
         assert(Type->As<ESBVType>()->GetSize() == NumBits);
         return NumString;
