@@ -1,6 +1,9 @@
 Most of the code in this software distribution falls under the purview
 of the following license:
 
+Copyright (c) 2017, Ammar Ben Khadra, University of Kaiserslautern, All
+rights reserved.
+
 Copyright (c) 2013, Abhishek Udupa, University of Pennsylvania, All
 rights reserved.
  
@@ -32,13 +35,6 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
 
 The above license does NOT apply to the code found in the following
 subdirectories in the original distribution:
-
-src/z3-4.3.1:
-This software is packaged along with the Z3 SMT solver as a
-convenience, and as such, the SMT solver does not fall under the
-purview of the above license. Details of the licensing terms for Z3
-can be found under the src/z3-4.3.1 directory in the original
-distribution. 
 
 src/external/sparsehash:
 In addition, certain parts of this code depends on the
