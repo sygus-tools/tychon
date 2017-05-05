@@ -86,7 +86,6 @@ namespace ESolver {
         ESolver* Solver;
         vector<map<string, Expression>> LetVarExpressionStack;
         vector<map<Expression, Expression>> LetVarBindingStack;
-        const SynthLib2Parser::SymbolTable* TheSymbolTable;
         Expression GetVarExpression(const string& VarName);
 
     public:

@@ -42,7 +42,7 @@
 #include "../descriptions/Grammar.hpp"
 #include "../common/ESolverOpts.hpp"
 #include "../solvers/CEGSolver.hpp"
-#include "synthlib2parser/SymbolTable.hpp"
+
 
 using namespace SynthLib2Parser;
 
@@ -60,8 +60,7 @@ namespace ESolver {
           InSynthFun(false),
           InSortDef(false),
           InConstraintCmd(false),
-          Solver(Solver),
-          TheSymbolTable(Parser.GetSymbolTable())
+          Solver(Solver)
     {
         // Nothing here
     }
@@ -481,7 +480,7 @@ namespace ESolver {
     void SynthLib2ESolver::VisitLiteralTerm(const LiteralTerm* TheTerm)
     {
         auto TheLit = TheTerm->GetLiteral();
-        TheLit->GetSort(this->TheSymbolTable)->Accept(this);
+        TheLit->GetSort()->Accept(this);
         auto Type = SortStack.back();
         SortStack.pop_back();
         auto Val = Solver->CreateValue(Type, TheLit->GetLiteralString());
@@ -531,7 +530,7 @@ namespace ESolver {
     {
         auto Lit = TheTerm->GetLiteral();
         auto const& LitString = Lit->GetLiteralString();
-        auto LitType = Lit->GetSort(this->TheSymbolTable);
+        auto LitType = Lit->GetSort();
         LitType->Accept(this);
         auto Type = SortStack.back();
         SortStack.pop_back();
