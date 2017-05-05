@@ -19,44 +19,47 @@ find_package(Boost 1.36.0 REQUIRED COMPONENTS program_options system)
 
 if(NOT Boost_FOUND)
   message(FATAL_ERROR "Boost was not found!! Please set variables BOOST_ROOT or"
-  " CMAKE_PREFIX_PATH to search for it. Alternatively, you can manually set variables"
-  " Boost_INCLUDE_DIRS and Boost_LIBRARY_DIRS")
+    " CMAKE_PREFIX_PATH to search for it. Alternatively, you can manually set variables"
+    " Boost_INCLUDE_DIRS and Boost_LIBRARY_DIRS")
 endif()
 
 ###############################################################################
 ## compiler flags #########################################################
 ###############################################################################
 
-set(libtychon_output_path ${CMAKE_SOURCE_DIR}/lib/${CMAKE_BUILD_TYPE})
+set(libesolver_output_path ${CMAKE_SOURCE_DIR}/lib/${CMAKE_BUILD_TYPE})
 
-set(CMAKE_CXX_FLAGS "-Wall -pedantic -Wno-write-strings\
+set(CMAKE_CXX_FLAGS " -Wall -pedantic -Wno-write-strings\
  -Wno-unused-function -D__STDC_LIMIT_MACROS -DDISABLE_STATIC_BP -pipe -std=c++11"
-   CACHE STRING "Flags used by the C++ compiler for all builds."
- FORCE
-)
+  CACHE STRING "Flags used by the C++ compiler for all builds."
+  FORCE)
 
 include_directories(${Boost_INCLUDE_DIRS})
 link_directories(${Boost_LIBRARY_DIRS})
 
+if(CMAKE_PREFIX_PATH)
+  include_directories(${CMAKE_PREFIX_PATH}/include)
+endif()
+
 set(CMAKE_CXX_FLAGS_DEBUG "-ggdb3 -O0 -fno-inline" CACHE STRING
-    "Flags used by the C++ compiler during debug builds."
-    FORCE)
+  "Flags used by the C++ compiler during debug builds."
+  FORCE)
 
-set(CMAKE_CXX_FLAGS_OPT "-O3" CACHE STRING
-    "Flags used by the C++ compiler during opt builds."
-    FORCE)
+set(CMAKE_CXX_FLAGS_OPT "-O2 -g" CACHE STRING
+  "Flags used by the C++ compiler during opt builds."
+  FORCE)
 
-set(CMAKE_CXX_FLAGS_OPTLTO "-O3 -flto" CACHE STRING
-    "Flags used by the C++ compiler during optlto builds."
-    FORCE)
+set(CMAKE_CXX_FLAGS_OPTLTO "-O3 -flto=n" CACHE STRING
+  "Flags used by the C++ compiler during optlto builds."
+  FORCE)
 
 set(CMAKE_CXX_FLAGS_PROF "-O3 -pg" CACHE STRING
-    "Flags used by the C++ compiler during prof builds."
-    FORCE)
+  "Flags used by the C++ compiler during prof builds."
+  FORCE)
 
-set(CMAKE_CXX_FLAGS_PROFLTO "-O3 -flto -pg" CACHE STRING
-    "Flags used by the C++ compiler during proflto builds."
-    FORCE)
+set(CMAKE_CXX_FLAGS_PROFLTO "-O3 -flto=n -pg" CACHE STRING
+  "Flags used by the C++ compiler during proflto builds."
+  FORCE)
 
 ###############################################################################
 ## target definitions #########################################################
@@ -64,7 +67,7 @@ set(CMAKE_CXX_FLAGS_PROFLTO "-O3 -flto -pg" CACHE STRING
 
 set(tychon_source_dir ${CMAKE_SOURCE_DIR}/src)
 
-set(esolverlib_sources
+set(tychon_source_files
   ${tychon_source_dir}/descriptions/GrammarNodes.cpp
   ${tychon_source_dir}/descriptions/Operators.cpp
   ${tychon_source_dir}/descriptions/Grammar.cpp
@@ -109,54 +112,56 @@ set(esolverlib_sources
   ${tychon_source_dir}/visitors/ExpressionVisitorBase.cpp
   ${tychon_source_dir}/expressions/ExprManager.cpp
   ${tychon_source_dir}/expressions/GenExpression.cpp
-  ${tychon_source_dir}/expressions/UserExpression.cpp
-)
+  ${tychon_source_dir}/expressions/UserExpression.cpp)
 
 set(main_source_file
-  ${tychon_source_dir}/main/ESolverSynthLib.cpp
-)
+  ${tychon_source_dir}/main/ESolverSynthLib.cpp)
 
 add_library(libsynthlib2parser STATIC IMPORTED)
-add_library(libz3 SHARED IMPORTED)
+find_library(libsynthlib2parser_path NAMES "libsynthlib2parser.a")
 
-set(CMAKE_FIND_LIBRARY_SUFFIXES ".a;.so")
-find_library(libsynthlib2parser_path NAMES "synthlib2parser")
-find_library(libz3_path NAMES "z3")
+if(NOT libsynthlib2parser_path)
+  message(FATAL_EROR "Could not find synthlib2parser library!")
+endif()
+
+if(${CMAKE_BUILD_TYPE} MATCHES "lto")
+  add_library(libz3 STATIC IMPORTED)
+  find_library(libz3_path NAMES "libz3.a")
+else()
+  add_library(libz3 SHARED IMPORTED)
+  find_library(libz3_path NAMES "libz3.so")
+endif()
+
+if(NOT libz3_path)
+  message(FATAL_EROR "Could not find z3 library!")
+endif()
 
 set_target_properties(libsynthlib2parser PROPERTIES
-  IMPORTED_LOCATION ${libsynthlib2parser_path}
-)
+  IMPORTED_LOCATION ${libsynthlib2parser_path})
 
 set_target_properties(libz3 PROPERTIES
-  IMPORTED_LOCATION ${libz3_path}
-)
+  IMPORTED_LOCATION ${libz3_path})
 
-add_library(libtychon_static STATIC ${esolverlib_sources})
+add_library(libesolver_static STATIC ${tychon_source_files})
 add_executable(tychon ${main_source_file})
 
-set_target_properties(libtychon_static PROPERTIES
-  OUTPUT_NAME libtychon
-  CLEAN_DIRECT_OUTPUT 1
-)
+set_target_properties(libesolver_static PROPERTIES
+  ARCHIVE_OUTPUT_DIRECTORY ${libesolver_output_path})
 
-set_target_properties(libtychon_static PROPERTIES
-  ARCHIVE_OUTPUT_DIRECTORY ${libtychon_output_path}
-)
+set_target_properties(libesolver_static PROPERTIES
+  OUTPUT_NAME esolver
+  CLEAN_DIRECT_OUTPUT 1)
 
 set_target_properties(tychon PROPERTIES
-  RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin/${CMAKE_BUILD_TYPE}
-)
-
-link_directories($ENV{HOME}/prefix/lib)
+  RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin/${CMAKE_BUILD_TYPE})
 
 target_link_libraries(tychon
-  libtychon_static
+  libesolver_static
   libsynthlib2parser
   libz3
   -fopenmp
   rt
-  ${Boost_LIBRARIES}
-)
+  ${Boost_LIBRARIES})
 
 ###############################################################################
 ## packaging ##################################################################
