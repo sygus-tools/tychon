@@ -1,5 +1,6 @@
 # Standard .gitignore for C++
 .idea
+clean-*.sh
 
 # Prerequisites
 *.d
