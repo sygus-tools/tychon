@@ -85,19 +85,6 @@ namespace ESolver {
 
         virtual uint32 GetArity() const = 0;
 
-        // Two level API
-        template<typename T>
-        T* As()
-        {
-            return dynamic_cast<T*>(this);
-        }
-
-        template<typename T>
-        const T* As() const
-        {
-            return dynamic_cast<const T*>(this);
-        }
-
         uint32 GetCost() const;
     };
 
@@ -258,8 +245,6 @@ namespace ESolver {
         const Grammar* GetSynthGrammar() const;
         const vector<string>& GetParamNames() const;
     };
-
-
 } /* end namespace */
 
 #endif /* __ESOLVER_OPERATORS_HPP */

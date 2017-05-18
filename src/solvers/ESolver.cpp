@@ -435,7 +435,7 @@ namespace ESolver {
     {
         auto Cached = ScopeMgr->LookupOperator("AuxVar_" + to_string(AuxID));
         if (Cached != nullptr) {
-            return Cached->As<AuxVarOperator>();
+            return dynamic_cast<const AuxVarOperator*>(Cached);
         }
         auto Op = new AuxVarOperator(AuxID, Type);
         ScopeMgr->AddOperator(Op);
@@ -472,7 +472,7 @@ namespace ESolver {
     {
         // Check that the lhs of each binding is indeed a let bound variable
         for (auto const& KV : Bindings) {
-            auto Op = KV.first->GetOp()->As<LetBoundVarOperator>();
+            auto Op = dynamic_cast<const LetBoundVarOperator*>(KV.first->GetOp());
             if (Op == nullptr) {
                 ostringstream sstr;
                 sstr << KV.first;
@@ -490,7 +490,7 @@ namespace ESolver {
         Expression NewExp;
         // Type checks
         if (Children.size() > 0) {
-            auto FuncOp = OpInfo->As<FuncOperatorBase>();
+            auto FuncOp = dynamic_cast<const FuncOperatorBase*>(OpInfo);
             const uint32 NumChildren = Children.size();
             vector<const ESFixedTypeBase*> ArgTypes(NumChildren);
             for (uint32 i = 0; i < NumChildren; ++i) {
@@ -504,37 +504,37 @@ namespace ESolver {
                                     "This could be due to mismatched numbers or types of parameters");
             }
             // We're good. Create the expression
-            if (OpInfo->As<InterpretedFuncOperator>() != nullptr) {
-                NewExp = new UserInterpretedFuncExpression(OpInfo->As<InterpretedFuncOperator>(),
+            if (dynamic_cast<const InterpretedFuncOperator*>(OpInfo) != nullptr) {
+                NewExp = new UserInterpretedFuncExpression(dynamic_cast<const InterpretedFuncOperator*>(OpInfo),
                                                            Children);
             } else {
-                NewExp = new UserSynthFuncExpression(OpInfo->As<SynthFuncOperator>(),
+                NewExp = new UserSynthFuncExpression(dynamic_cast<const SynthFuncOperator*>(OpInfo),
                                                      Children);
             }
         } else {
             
             // This could be a constant, a UQVariable, an aux variable, 
             // a formal param or a let bound variable
-            if (OpInfo->As<VarOperatorBase>() != nullptr) {
-                if (OpInfo->As<UQVarOperator>() != nullptr) {
-                    NewExp = new UserUQVarExpression(OpInfo->As<UQVarOperator>());
-                } else if (OpInfo->As<FormalParamOperator>() != nullptr) {
-                    NewExp = new UserFormalParamExpression(OpInfo->As<FormalParamOperator>());
-                } else if (OpInfo->As<AuxVarOperator>() != nullptr) {
-                    NewExp = new UserAuxVarExpression(OpInfo->As<AuxVarOperator>());
-                } else if (OpInfo->As<LetBoundVarOperator>() != nullptr) {
-                    NewExp = new UserLetBoundVarExpression(OpInfo->As<LetBoundVarOperator>());
+            if (dynamic_cast<const VarOperatorBase*>(OpInfo) != nullptr) {
+                if (dynamic_cast<const UQVarOperator*>(OpInfo) != nullptr) {
+                    NewExp = new UserUQVarExpression(dynamic_cast<const UQVarOperator*>(OpInfo));
+                } else if (dynamic_cast<const FormalParamOperator*>(OpInfo) != nullptr) {
+                    NewExp = new UserFormalParamExpression(dynamic_cast<const FormalParamOperator*>(OpInfo));
+                } else if (dynamic_cast<const AuxVarOperator*>(OpInfo) != nullptr) {
+                    NewExp = new UserAuxVarExpression(dynamic_cast<const AuxVarOperator*>(OpInfo));
+                } else if (dynamic_cast<const LetBoundVarOperator*>(OpInfo) != nullptr) {
+                    NewExp = new UserLetBoundVarExpression(dynamic_cast<const LetBoundVarOperator*>(OpInfo));
                 } else {
                     throw InternalError((string)"BUG: Unhandled operator type at " + __FILE__ + ":" + 
                                         to_string(__LINE__));
                 }
             } else {
                 // This can only be a const operator now
-                if (OpInfo->As<ConstOperator>() != nullptr) {
-                    NewExp = new UserConstExpression(OpInfo->As<ConstOperator>());
-                } else if (OpInfo->As<MacroOperator>() != nullptr) {
+                if (dynamic_cast<const ConstOperator*>(OpInfo) != nullptr) {
+                    NewExp = new UserConstExpression(dynamic_cast<const ConstOperator*>(OpInfo));
+                } else if (dynamic_cast<const MacroOperator*>(OpInfo) != nullptr) {
                     // OR it can be a constant macro expression
-                    NewExp = new UserInterpretedFuncExpression(OpInfo->As<MacroOperator>(), Children);
+                    NewExp = new UserInterpretedFuncExpression(dynamic_cast<const MacroOperator*>(OpInfo), Children);
                 } else {
                     throw TypeException((string)"Error: Could not find a meaningful way to construct " +
                                         "an expression with operator having name \"" + OpInfo->GetName() + 
@@ -598,15 +598,15 @@ namespace ESolver {
                 throw TypeException((string)"bvextract can only be applied to constant integer indices");
             }
 
-            auto OpName = BVLogic::GetExtractOpName(Exp1->GetType(), 
-                                                    Exp2->GetOp()->As<ConstOperator>()->GetConstantValue()->GetValue(), 
-                                                    Exp3->GetOp()->As<ConstOperator>()->GetConstantValue()->GetValue());
+            auto OpName = BVLogic::GetExtractOpName(Exp1->GetType(),
+                                                    (dynamic_cast<const ConstOperator*>(Exp2->GetOp()))->GetConstantValue()->GetValue(),
+                                                    (dynamic_cast<const ConstOperator*>(Exp3->GetOp()))->GetConstantValue()->GetValue());
             // recurse with new name
             auto Op = LookupOperator(OpName);
             if (Op == nullptr) {
-                LoadedBVLogic->InstantiateExtractOperator(Exp1->GetType(), 
-                                                          Exp2->GetOp()->As<ConstOperator>()->GetConstantValue()->GetValue(), 
-                                                          Exp3->GetOp()->As<ConstOperator>()->GetConstantValue()->GetValue());
+                LoadedBVLogic->InstantiateExtractOperator(Exp1->GetType(),
+                                                          (dynamic_cast<const ConstOperator*>(Exp2->GetOp()))->GetConstantValue()->GetValue(),
+                                                          (dynamic_cast<const ConstOperator*>(Exp2->GetOp()))->GetConstantValue()->GetValue());
                 Op = LookupOperator(OpName);
             }
             vector<Expression> Children = { Exp1 };
@@ -649,15 +649,15 @@ namespace ESolver {
     Expression ESolver::CreateExpression(const string& VariableName)
     {
         vector<Expression> Args;
-        const OperatorBase* Op = ScopeMgr->LookupOperator(VariableName)->As<VarOperatorBase>();
+        const OperatorBase* Op = dynamic_cast<const VarOperatorBase*>(ScopeMgr->LookupOperator(VariableName));
         if (Op == nullptr) {
-            Op = ScopeMgr->LookupOperator(VariableName)->As<ConstOperator>();
+            Op = dynamic_cast<const ConstOperator*>(ScopeMgr->LookupOperator(VariableName));
         }
         // audupa: it might just be a constant macro
         if (Op == nullptr) {
-            Op = ScopeMgr->LookupOperator(VariableName)->As<MacroOperator>();
+            Op = dynamic_cast<const MacroOperator*>(ScopeMgr->LookupOperator(VariableName));
         }
-        if(Op == NULL) {
+        if(Op == nullptr) {
             throw UndefinedVarException((string)"Variable or constant \"" + VariableName +
                                         + "\" not found to create expression");
         }

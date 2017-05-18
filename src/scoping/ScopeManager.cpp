@@ -124,7 +124,7 @@ namespace ESolver {
                                                    const vector<const ESFixedTypeBase*>& ArgTypes) const
     {
         auto MangledName = FuncOperatorBase::MangleName(OperatorName, ArgTypes);
-        return LookupOperator(MangledName)->As<FuncOperatorBase>();
+        return dynamic_cast<FuncOperatorBase*>(LookupOperator(MangledName));
     }
 
     void ScopeManager::AddOperator(OperatorBase* Op, bool ToBottom)

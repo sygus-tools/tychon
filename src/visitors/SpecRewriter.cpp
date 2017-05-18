@@ -324,7 +324,7 @@ SpecRewriter::SpecRewriter(ESolver* Solver, uint32 NumSynthFuncs)
         auto ParamMap = Exp->GetParamMap();
         for (uint32 i = 0; i < NumChildren; ++i) {
             auto const& Child = Children[i];
-            auto Op = Child->GetOp()->As<AuxVarOperator>();
+            auto Op = dynamic_cast<const AuxVarOperator*>(Child->GetOp());
             if (Op == nullptr) {
                 throw InternalError((string)"Internal Error: Expected to see an aux var.\n" +
                                     "At: " + __FILE__ + ":" + to_string(__LINE__));

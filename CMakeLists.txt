@@ -49,7 +49,7 @@ set(CMAKE_CXX_FLAGS_OPT "-O2 -g" CACHE STRING
   "Flags used by the C++ compiler during opt builds."
   FORCE)
 
-set(CMAKE_CXX_FLAGS_OPTLTO "-O3 -flto=n" CACHE STRING
+set(CMAKE_CXX_FLAGS_OPTLTO "-O3 -flto=n -march=native" CACHE STRING
   "Flags used by the C++ compiler during optlto builds."
   FORCE)
 

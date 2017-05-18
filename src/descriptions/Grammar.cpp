@@ -167,7 +167,7 @@ namespace ESolver {
         if (Op == nullptr) {
             throw TypeException((string)"Error: No constant named \"" + ConstName + "\" could be resolved");
         }
-        auto ConstOp = Op->As<ConstOperator>();
+        auto ConstOp = dynamic_cast<const ConstOperator*>(Op);
         if (ConstOp == nullptr) {
             throw TypeException((string)"Error: No constant named \"" + ConstName + "\" could be resolved");
         }

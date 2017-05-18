@@ -764,8 +764,8 @@ namespace ESolver {
 
         for(set<string>::const_iterator it = RelevantVars.begin(); it != RelevantVarsEnd; ++it) {
             const OperatorBase* OpInfo = Solver->LookupOperator(*it);
-            const VarOperatorBase* VarOp = OpInfo->As<VarOperatorBase>();
-            auto AuxVarOp = OpInfo->As<AuxVarOperator>();
+            const VarOperatorBase* VarOp = dynamic_cast<const VarOperatorBase*>(OpInfo);
+            auto AuxVarOp = dynamic_cast<const AuxVarOperator*>(OpInfo);
             if(VarOp == NULL && AuxVarOp == NULL) {
                 throw ModelGenException((string)"Error: Expected operator \"" + *it +
                                         "\" to be a variable");
@@ -819,8 +819,8 @@ namespace ESolver {
 
             string ValueString;
             const OperatorBase* CurOp = Solver->LookupOperator(it->first);
-            auto VarOp = CurOp->As<VarOperatorBase>();
-            auto AuxVarOp = CurOp->As<AuxVarOperator>();
+            auto VarOp = dynamic_cast<const VarOperatorBase*>(CurOp);
+            auto AuxVarOp = dynamic_cast<const AuxVarOperator*>(CurOp);
 
             if(VarOp == NULL && AuxVarOp == NULL) {
                 throw ModelGenException((string)"Error: Expected operator \"" + it->first + "\" to be a variable");
