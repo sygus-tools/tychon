@@ -111,8 +111,8 @@ namespace ESolver {
     void Z3Sort::ComputeHashValue() const
     {
         if (Ctx != nullptr && Sort != nullptr) {
-            auto&& SortAsString = ToString();
-            HashValue = SpookyHash::SpookyHash::Hash64(SortAsString.c_str(), SortAsString.length(), (uint64)0);
+            auto&& SortAsCString = ToCString();
+            HashValue = SpookyHash::SpookyHash::Hash64(SortAsCString, strlen(SortAsCString), (uint64)0);
         } else {
             throw InternalError((string)"Error ComputeHashValue() called on null Z3Sort object");
         }
@@ -158,7 +158,16 @@ namespace ESolver {
         }
     }
 
-    // Z3Expr implementation
+    CString Z3Sort::ToCString() const
+    {
+        if (Ctx != nullptr && Sort != nullptr) {
+            return Z3_sort_to_string(Ctx, Sort);
+        } else {
+            throw InternalError((string)"Error ToString() called on null Z3Sort object");
+        }
+    }
+
+// Z3Expr implementation
 
     Z3Expr::Z3Expr()
         : Z3Object(), AST(nullptr)
@@ -196,8 +205,8 @@ namespace ESolver {
         if (Ctx == nullptr || AST == nullptr) {
             throw InternalError((string)"ComputeHashValue() called on a null Z3Expr object");
         }
-        auto&& ASTAsString = ToString();
-        HashValue = SpookyHash::SpookyHash::Hash64(ASTAsString.c_str(), ASTAsString.length(), (uint64)0);
+        auto&& ASTAsCString = ToCString();
+        HashValue = SpookyHash::SpookyHash::Hash64(ASTAsCString, strlen(ASTAsCString), (uint64)0);
     }
 
     Z3Expr& Z3Expr::operator = (const Z3Expr& Other)
@@ -247,6 +256,15 @@ namespace ESolver {
     {
         if (Ctx != nullptr && AST != nullptr) {
             return string(Z3_ast_to_string(Ctx, AST));
+        } else {
+            throw InternalError((string)"ToString() called on null Z3Expr object");
+        }
+    }
+
+    CString Z3Expr::ToCString() const
+    {
+        if (Ctx != nullptr && AST != nullptr) {
+            return Z3_ast_to_string(Ctx, AST);
         } else {
             throw InternalError((string)"ToString() called on null Z3Expr object");
         }
@@ -310,8 +328,8 @@ namespace ESolver {
         if (Ctx == nullptr || Model == nullptr) {
             throw InternalError((string)"ComputeHashValue() called on a null Z3Model object");
         }
-        auto&& AsString = ToString();
-        HashValue = SpookyHash::SpookyHash::Hash64(AsString.c_str(), AsString.length(), (uint64)0);
+        auto&& AsCString = ToCString();
+        HashValue = SpookyHash::SpookyHash::Hash64(AsCString, strlen(AsCString), (uint64)0);
     }
 
     string Z3Model::ToString() const
@@ -321,7 +339,15 @@ namespace ESolver {
         }
         return string(Z3_model_to_string(Ctx, Model));
     }
-            
+
+    CString Z3Model::ToCString() const
+    {
+        if (Ctx == nullptr || Model == nullptr) {
+            throw InternalError((string)"ToString() called on a null Z3Model object");
+        }
+        return Z3_model_to_string(Ctx, Model);
+    }
+
     bool Z3Model::operator == (const Z3Object& Other) const
     {
         auto AsZ3Model = dynamic_cast<const Z3Model*>(&Other);

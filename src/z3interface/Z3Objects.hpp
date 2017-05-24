@@ -69,6 +69,7 @@ namespace ESolver {
         // and also an equality operator
         virtual bool operator == (const Z3Object& Other) const = 0;
         virtual string ToString() const = 0;
+        virtual CString ToCString() const = 0;
     };
 
     // This is a wrapper around the Z3_sort type
@@ -91,6 +92,7 @@ namespace ESolver {
         Z3Sort& operator = (const Z3Sort& Other);
         virtual bool operator == (const Z3Object& Other) const override;
         virtual string ToString() const override;
+        virtual CString ToCString() const override;
     };
 
     // A wrapper around Z3_ast
@@ -114,6 +116,7 @@ namespace ESolver {
         Z3Sort GetSort() const;
         virtual bool operator == (const Z3Object& Other) const override;
         virtual string ToString() const override;
+        virtual CString ToCString() const override;
     };
     
     // A wrapper around Z3_model
@@ -136,6 +139,7 @@ namespace ESolver {
         Z3Model& operator = (const Z3Model& Model);
         virtual bool operator == (const Z3Object& Other) const override;
         virtual string ToString() const override;
+        virtual CString ToCString() const override;
     };
 
 } /* End namespace */

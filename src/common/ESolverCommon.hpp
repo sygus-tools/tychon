@@ -96,6 +96,7 @@ namespace ESolver {
     typedef Z3Expr SMTExpr;
     typedef Z3Sort SMTType;
     typedef map<string, string> SMTSolverParams;
+    typedef const char * CString;
 
 } /* End namespace */
 
