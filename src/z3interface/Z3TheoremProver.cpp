@@ -39,12 +39,9 @@
 
 
 #include "Z3TheoremProver.hpp"
-#include "../exceptions/ESException.hpp"
 #include "../solvers/ESolver.hpp"
 #include "../descriptions/ESType.hpp"
 #include <boost/functional/hash.hpp>
-#include "Z3Objects.hpp"
-#include "../external/spookyhash/SpookyHash.hpp"
 #include <boost/lexical_cast.hpp>
 #include "../descriptions/Operators.hpp"
 

@@ -42,7 +42,6 @@
 #include "../solvers/ESolver.hpp"
 #include "../descriptions/ESType.hpp"
 #include "../utils/TextUtils.hpp"
-#include "../external/spookyhash/SpookyHash.hpp"
 #include "../z3interface/TheoremProver.hpp"
 
 namespace ESolver {
