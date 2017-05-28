@@ -75,7 +75,7 @@ namespace ESolver {
                                                    const vector<const ESFixedTypeBase*>& ArgTypes)
     {
         auto const& MangledName = FuncOperatorBase::MangleName(OperatorName, ArgTypes);
-        return dynamic_cast<FuncOperatorBase*>(LookupOperator(MangledName));
+        return OperatorBase::As<FuncOperatorBase>(LookupOperator(MangledName));
     }
 
     bool ESolverScope::IsAnonymous() const

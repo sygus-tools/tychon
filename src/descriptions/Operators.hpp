@@ -85,6 +85,19 @@ namespace ESolver {
 
         virtual uint32 GetArity() const = 0;
 
+        // Two level API
+        template<typename T>
+        static T* As(OperatorBase* Ptr)
+        {
+            return dynamic_cast<T*>(Ptr);
+        }
+
+        template<typename T>
+        static const T* As(const OperatorBase* Ptr)
+        {
+            return dynamic_cast<const T*>(Ptr);
+        }
+
         uint32 GetCost() const;
     };
 

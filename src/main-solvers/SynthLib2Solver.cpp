@@ -550,14 +550,14 @@ namespace ESolver {
         } else {
             // Check if this is a defined constant, etc
             auto ConstOp = Solver->LookupOperator(Symbol);
-            if (dynamic_cast<const ConstOperator*>(ConstOp) == nullptr) {
+            if (OperatorBase::As<ConstOperator>(ConstOp) == nullptr) {
                 throw SynthLib2Exception(TheTerm->GetLocation().GetLineNum(),
                                          TheTerm->GetLocation().GetColNum(),
                                          (string)"Symbol \"" + Symbol + "\" could not be resolved to " +
                                          "anything meaningful");
             }
             else {
-                ProcessedGTermStack.push_back(SynthGrammar->MakeConst(dynamic_cast<const ConstOperator*>(ConstOp)));
+                ProcessedGTermStack.push_back(SynthGrammar->MakeConst(OperatorBase::As<ConstOperator>(ConstOp)));
             }
         }
     }

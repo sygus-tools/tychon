@@ -144,7 +144,7 @@ namespace ESolver {
         // Visit the binding expressions first
         for (auto const& Binding : Exp->GetLetBoundVars()) {
             Binding.second->Accept(this);
-            NewBindings.insert(dynamic_cast<const LetBoundVarOperator*>(Binding.first->GetOp()));
+            NewBindings.insert(OperatorBase::As<LetBoundVarOperator>(Binding.first->GetOp()));
         }
 
         // Push the new bindings and recurse on the actual expression
