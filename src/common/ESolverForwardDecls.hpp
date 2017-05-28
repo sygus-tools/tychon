@@ -42,10 +42,6 @@
 #define __ESOLVER_FORWARD_DECLS_HPP
 
 #include "ESolverCommon.hpp"
-#include "../external/sparsehash/dense_hash_map"
-#include "../external/sparsehash/dense_hash_set"
-#include "../external/sparsehash/sparse_hash_map"
-#include "../external/sparsehash/sparse_hash_set"
 
 #define UNDEFINED_HASH_VALUE ((uint64)0)
 #define INVALID_TYPE_ID (-1)

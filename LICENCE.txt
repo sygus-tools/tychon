@@ -36,18 +36,12 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
 The above license does NOT apply to the code found in the following
 subdirectories in the original distribution:
 
-src/external/sparsehash:
-In addition, certain parts of this code depends on the
-hash map and hash set libraries developed by Google Inc. The licensing
-terms for these may be found in the appropriate directory.
-
 src/external/spookyhash:
 The licensing terms for this hash library can be found in the
 appropriate directory as well.
 
 The author and the University of Pennsylvania make no claims of
-ownership or having developed the code in the Z3 SMT solver, the
-Google Sparse Hash Libraries and the Spooky Hash Library. They are
-only packaged together for convenience of the user. The user must
-ensure that the licensing terms of these software packages are met as
+ownership or having developed the code in the Spooky Hash Library.
+It is only packaged together for convenience of the user. The user must
+ensure that the licensing terms of this software packages is met as
 well.
