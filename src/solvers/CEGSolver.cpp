@@ -331,11 +331,10 @@ namespace ESolver {
                 ExpEnumerator->EnumerateOfCost(i);
                 if (Restart) {
                     ExpEnumerator->Reset();
+                    ++NumRestarts;
                     break;
                 }
             }
-            if (Restart && Opts.StatsLevel >= 1)
-                ++NumRestarts;
             if (Restart && Opts.StatsLevel >= 2){
                 TheLogger.Log1("Restarting enumeration... (").Log1(NumRestarts).Log1(")\n");
             }
