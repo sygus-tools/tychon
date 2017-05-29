@@ -119,10 +119,10 @@ namespace ESolver {
         return Type->As<ESEnumType>()->GetEnumValueIDForName(QueryString);
     }
 
-    static inline int64 ParseBVString(const string& ValueString, uint32 NumBits)
+    static inline uint64 ParseBVString(const string& ValueString, uint32 NumBits)
     {
         string ValString = ValueString;
-        int64 Retval;
+        uint64 Retval;
 
         boost::algorithm::trim(ValString);
 
