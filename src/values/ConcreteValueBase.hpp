@@ -50,13 +50,13 @@ namespace ESolver {
     /**
        A class representing and efficiently implementing  the most commonly 
        used types of values. Additional classes may be extended from this 
-       as required to handle aadditional types as they might be added
+       as required to handle additional types as they might be added
        
        We simply use a uint64 to represent ALL values.
        Ints - No explanation needed
        Bools - 1 for true, 0 for false
        Subranges - Just the integer value
-       Sets - Sets of upto 64 elements are represented as bitvectors
+       Sets - Sets of up to 64 elements are represented as bitvectors
        EnumTypes - The value encodes a distinct enum constructor, which
        may be looked up in an auxiliary lookup structure
     */

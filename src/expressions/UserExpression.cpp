@@ -147,7 +147,7 @@ namespace ESolver {
 
     bool UserUQVarExpression::Equals(const UserExpressionBase& Other) const
     {
-        auto OtherPtr = Other.As<UserUQVarExpression>();
+        auto OtherPtr = UserExpressionBase::As<UserUQVarExpression>(&Other);
         if (OtherPtr == nullptr) {
             return false;
         }
@@ -190,7 +190,7 @@ namespace ESolver {
 
     bool UserLetBoundVarExpression::Equals(const UserExpressionBase& Other) const
     {
-        auto OtherPtr = Other.As<UserLetBoundVarExpression>();
+        auto OtherPtr = UserExpressionBase::As<UserLetBoundVarExpression>(&Other);
         if (OtherPtr == nullptr) {
             return false;
         }
@@ -235,7 +235,7 @@ namespace ESolver {
 
     bool UserFormalParamExpression::Equals(const UserExpressionBase& Other) const
     {
-        auto OtherPtr = Other.As<UserFormalParamExpression>();
+        auto OtherPtr = UserExpressionBase::As<UserFormalParamExpression>(&Other);
         if (OtherPtr == nullptr) {
             return false;
         }
@@ -271,7 +271,7 @@ namespace ESolver {
 
     bool UserAuxVarExpression::Equals(const UserExpressionBase& Other) const
     {
-        auto OtherPtr = Other.As<UserAuxVarExpression>();
+        auto OtherPtr = UserExpressionBase::As<UserAuxVarExpression>(&Other);
         if (OtherPtr == nullptr) {
             return false;
         }
@@ -334,7 +334,7 @@ namespace ESolver {
 
     bool UserConstExpression::Equals(const UserExpressionBase& Other) const
     {
-        auto OtherPtr = Other.As<UserConstExpression>();
+        auto OtherPtr = UserExpressionBase::As<UserConstExpression>(&Other);
         if (OtherPtr == nullptr) {
             return false;
         }
@@ -432,7 +432,7 @@ namespace ESolver {
 
     bool UserInterpretedFuncExpression::Equals(const UserExpressionBase& Other) const
     {
-        auto OtherPtr = Other.As<UserInterpretedFuncExpression>();
+        auto OtherPtr = UserExpressionBase::As<UserInterpretedFuncExpression>(&Other);
         if (OtherPtr == nullptr) {
             return false;
         }
@@ -499,7 +499,7 @@ namespace ESolver {
 
     bool UserSynthFuncExpression::Equals(const UserExpressionBase& Other) const
     {
-        auto OtherPtr = Other.As<UserSynthFuncExpression>();
+        auto OtherPtr = UserExpressionBase::As<UserSynthFuncExpression>(&Other);
         if (OtherPtr == nullptr) {
             return false;
         }
@@ -577,7 +577,7 @@ namespace ESolver {
 
     bool UserLetExpression::Equals(const UserExpressionBase& Other) const
     {
-        auto OtherPtr = Other.As<UserLetExpression>();
+        auto OtherPtr = UserExpressionBase::As<UserLetExpression>(&Other);
         if (OtherPtr == nullptr) {
             return false;
         }

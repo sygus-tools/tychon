@@ -80,15 +80,15 @@ namespace ESolver {
 
         // two level API
         template<typename T>
-        T* As()
+        static T* As(UserExpressionBase* Ptr)
         {
-            return dynamic_cast<T*>(this);
+            return dynamic_cast<T*>(Ptr);
         }
 
         template<typename T>
-        const T* As() const
+        static const T* As(const UserExpressionBase* Ptr)
         {
-            return dynamic_cast<const T*>(this);
+            return dynamic_cast<const T*>(Ptr);
         }
 
         const OperatorBase* GetOp() const;

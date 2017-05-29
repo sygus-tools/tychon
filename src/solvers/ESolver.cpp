@@ -589,8 +589,8 @@ namespace ESolver {
         // special case for bv extract
 
         if (OperatorName == "bvextract") {
-            if (Exp2->As<UserConstExpression>() == nullptr ||
-                Exp3->As<UserConstExpression>() == nullptr) {
+            if (UserExpressionBase::As<UserConstExpression>(Exp2) == nullptr ||
+                UserExpressionBase::As<UserConstExpression>(Exp3) == nullptr) {
                 throw TypeException((string)"bvextract can only be applied to constant indices");
             }
             if (Exp2->GetType() != IntType ||

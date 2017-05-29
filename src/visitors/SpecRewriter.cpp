@@ -102,7 +102,7 @@ SpecRewriter::SpecRewriter(ESolver* Solver, uint32 NumSynthFuncs)
         vector<const AuxVarOperator*> CurArgOps;
 
         for (auto const& Child : SubstChildren) {
-            if (Child->As<UserAuxVarExpression>() == nullptr) {
+            if (UserExpressionBase::As<UserAuxVarExpression>(Child) == nullptr) {
                 // We need to fixup an eval rule for this child
                 // Check if one already exists for it first
                 auto it = ExpMap.find(Child);
@@ -122,7 +122,7 @@ SpecRewriter::SpecRewriter(ESolver* Solver, uint32 NumSynthFuncs)
                 NewSubstChildren.push_back(Child);
             }
 
-            auto NewSubstChild = NewSubstChildren.back()->As<UserAuxVarExpression>();
+            auto NewSubstChild = UserExpressionBase::As<UserAuxVarExpression>(NewSubstChildren.back());
             CurArgOps.push_back(NewSubstChild->GetOp());
             BaseAuxVarOps.insert(NewSubstChild->GetOp());
         }
