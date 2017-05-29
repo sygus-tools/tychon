@@ -42,7 +42,7 @@ if(CMAKE_PREFIX_PATH)
   include_directories(${CMAKE_PREFIX_PATH}/include)
 endif()
 
-set(CMAKE_CXX_FLAGS_DEBUG "-ggdb3 -O0 -fno-inline" CACHE STRING
+set(CMAKE_CXX_FLAGS_DEBUG "-ggdb3 -O0 -fno-inline -fno-omit-frame-pointer" CACHE STRING
   "Flags used by the C++ compiler during debug builds."
   FORCE)
 
