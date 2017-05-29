@@ -3,6 +3,12 @@ project(tychon CXX)
 
 set(BUILD_TYPES debug opt optlto prof proflto)
 
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -Wextra -pedantic\
+  -Wno-write-strings -Wno-unused-parameter -Wno-unused-function\
+  -D__STDC_LIMIT_MACROS -DDISABLE_STATIC_BP"
+  CACHE STRING "Flags used by the C++ compiler for all builds."
+  FORCE)
+
 if(NOT CMAKE_BUILD_TYPE)
   message(STATUS "Setting build type to 'debug' as none was specified.")
   message(STATUS "Possible build types include ${BUILD_TYPES}")
@@ -28,11 +34,6 @@ endif()
 ###############################################################################
 
 set(libesolver_output_path ${CMAKE_SOURCE_DIR}/lib/${CMAKE_BUILD_TYPE})
-
-set(CMAKE_CXX_FLAGS " -Wall -pedantic -Wno-write-strings\
- -Wno-unused-function -D__STDC_LIMIT_MACROS -DDISABLE_STATIC_BP -pipe -std=c++11"
-  CACHE STRING "Flags used by the C++ compiler for all builds."
-  FORCE)
 
 include_directories(${Boost_INCLUDE_DIRS})
 link_directories(${Boost_LIBRARY_DIRS})

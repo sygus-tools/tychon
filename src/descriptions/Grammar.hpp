@@ -226,7 +226,7 @@ namespace ESolver {
         const map<string, GrammarLetVar*>& GetLetBoundVars() const;
         const map<string, GrammarFPVar*>& GetFormalParamVars() const;
 
-        const uint32 GetNumLetBoundVars() const;
+        uint32 GetNumLetBoundVars() const;
     };
 
 

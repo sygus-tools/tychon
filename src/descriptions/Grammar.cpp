@@ -466,7 +466,7 @@ namespace ESolver {
         return FormalParamVars;
     }
 
-    const uint32 Grammar::GetNumLetBoundVars() const
+    uint32 Grammar::GetNumLetBoundVars() const
     {
         return LetBoundVars.size();
     }
