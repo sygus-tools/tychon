@@ -269,6 +269,7 @@ namespace ESolver {
 
     const ConcreteValueBase* ESolver::CreateValue(const ESFixedTypeBase* Type, const string& ValueString)
     {
+        uint64 TempValue;
         switch(Type->GetBaseType()) {
         case BaseTypeBool:
             return CreateValue(Type, ParseBoolString(ValueString));
@@ -277,7 +278,9 @@ namespace ESolver {
         case BaseTypeEnum:
             return CreateValue(Type, ParseEnumString(ValueString, Type));
         case BaseTypeBitVector:
-            return CreateValue(Type, ParseBVString(ValueString, Type->As<ESBVType>()->GetSize()));
+            // Maintain bit representation using type punning
+            TempValue = ParseBVString(ValueString, Type->As<ESBVType>()->GetSize());
+            return CreateValue(Type, *(int64*)&TempValue);
         default:
             throw TypeException("Unhandled type in CreateValue()");
         }

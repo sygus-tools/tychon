@@ -195,7 +195,7 @@ namespace ESolver {
 
     inline SMTExpr ConcreteValueBase::BVToSMT(TheoremProver* TP) const
     {
-        return TP->CreateBVConstant((uint64)TheValue, static_cast<const ESBVType*>(Type)->GetSize());
+        return TP->CreateBVConstant(*(uint64*)&TheValue, static_cast<const ESBVType*>(Type)->GetSize());
     }
 
     SMTExpr ConcreteValueBase::ToSMT(TheoremProver* TP) const
