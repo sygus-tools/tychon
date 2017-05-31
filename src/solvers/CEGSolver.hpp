@@ -50,6 +50,11 @@
 
 namespace ESolver {
 
+    enum class CEGSolverMode {
+        CEG,
+        PBE
+    };
+
     class CEGSolver : public ESolver
     {
         friend class ConcreteEvaluator;
@@ -72,6 +77,7 @@ namespace ESolver {
 
         uint64 NumExpressionsTried;
         uint64 NumDistExpressions;
+        CEGSolverMode Mode;
 
         // Single function case
         inline bool CheckSymbolicValidity(const GenExpressionBase* Exp);

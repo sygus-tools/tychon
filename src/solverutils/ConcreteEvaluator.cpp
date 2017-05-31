@@ -307,8 +307,7 @@ namespace ESolver {
         GenExpressionBase* Arr[1];
         Arr[0] = const_cast<GenExpressionBase*>(Exp);
 
-        bool Distinguishable = true;
-        Distinguishable = CheckSubExpression(const_cast<GenExpressionBase*>(Exp),
+        bool Distinguishable = CheckSubExpression(const_cast<GenExpressionBase*>(Exp),
                                              Type, EvalTypeID, Status);
         if (!Distinguishable && !NoDist) {
             Status &= ~(CONCRETE_EVAL_DIST);

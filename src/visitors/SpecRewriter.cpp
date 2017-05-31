@@ -234,7 +234,8 @@ SpecRewriter::SpecRewriter(ESolver* Solver, uint32 NumSynthFuncs)
     Expression SpecRewriter::Do(ESolver* Solver, const Expression& Exp,
                                 vector<const AuxVarOperator*>& BaseAuxVarOps,
                                 vector<const AuxVarOperator*>& DerivedAuxVarOps,
-                                vector<map<vector<uint32>, uint32>>& SynthFunAppMaps)
+                                vector<map<vector<uint32>, uint32>>& SynthFunAppMaps,
+                                vector<pair<string, string>>& ConstVars)
     {
         auto&& SynthFuncs = SynthFuncGatherer::Do(Exp);
         const uint32 NumSynthFuncs = SynthFuncs.size();
@@ -295,7 +296,9 @@ SpecRewriter::SpecRewriter(ESolver* Solver, uint32 NumSynthFuncs)
         auto Antecedent = Solver->CreateTrueExpression();
         for (auto const& EvalRule : EvalRules) {
             auto LHSVar = Solver->CreateExpression(EvalRule.GetLHS());
-
+            if (EvalRule.GetRHS()->GetOp()->GetArity() == 0){
+                ConstVars.push_back({LHSVar->ToString(), EvalRule.GetRHS()->ToString()});
+            }
             Antecedent =
                 Solver->CreateExpression("and", Antecedent,
                                          Solver->CreateExpression("=", EvalRule.GetRHS(),

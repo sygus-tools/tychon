@@ -100,7 +100,8 @@ namespace ESolver {
         static Expression Do(ESolver* Solver, const Expression& Exp,
                              vector<const AuxVarOperator*>& BaseAuxVarsOps,
                              vector<const AuxVarOperator*>& DerivedAuxVarOps,
-                             vector<map<vector<uint32>, uint32>>& SynthFunAppMaps);
+                             vector<map<vector<uint32>, uint32>>& SynthFunAppMaps,
+                             vector<pair<string, string>>& ConstVars);
     };
 
 } /* End namespace */

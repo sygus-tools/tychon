@@ -57,7 +57,7 @@
 namespace ESolver {
 
     CEGSolver::CEGSolver(const ESolverOpts* Opts)
-        : ESolver(Opts), ConcEval(nullptr), ExpEnumerator(nullptr)
+        : ESolver(Opts), ConcEval(nullptr), ExpEnumerator(nullptr), Mode(CEGSolverMode::CEG)
     {
         // Nothing here
     }
@@ -195,11 +195,20 @@ namespace ESolver {
                                                    GenExpressionBase::ToUserExpression(Exp, this)));
             return STOP_ENUMERATION;
         } else {
+            if(Mode == CEGSolverMode::PBE) {
+                throw InternalError((string)"Internal Error: Symbolic validity should " +
+                    "always hold in Programming-by-Example mode" +
+                    "\nAt: " + __FILE__ + ":" + to_string(__LINE__));
+            }
             // Get the counter example and add it as a point
             SMTModel TheSMTModel;
             SMTConcreteValueModel ConcSMTModel;
-            TP->GetConcreteModel(RelevantVars, TheSMTModel, ConcSMTModel, this);
+            TP->GetConcreteModel(RelevantVars,
+                                 TheSMTModel,
+                                 ConcSMTModel,
+                                 this);
             ConcEval->AddPoint(ConcSMTModel);
+
             if (!Opts.NoDist) {
                 Restart = true;
                 return STOP_ENUMERATION;
@@ -261,8 +270,10 @@ namespace ESolver {
         // Check the spec
         LetBindingChecker::Do(Constraint);
         // Rewrite the spec
+        vector<pair<string, string>> ConstRelevantVars;
+        ConstRelevantVars.reserve(BaseAuxVars.size());
         RewrittenConstraint = SpecRewriter::Do(this, Constraint, BaseAuxVars, DerivedAuxVars,
-                                               SynthFunAppMaps);
+                                               SynthFunAppMaps, ConstRelevantVars);
 
         if (Opts.StatsLevel >= 2) {
             TheLogger.Log2("Rewritten Constraint:").Log2("\n");
@@ -271,25 +282,21 @@ namespace ESolver {
 
         OrigConstraint = Constraint;
 
-        // Set up SMT expressions for  aux vars
         BaseExprs = vector<SMTExpr>(BaseAuxVars.size() + DerivedAuxVars.size());
         for (auto const& Op : BaseAuxVars) {
+            // Set up SMT expressions for  aux vars
             BaseExprs[Op->GetPosition()] =
                 TP->CreateVarExpr(Op->GetName(), Op->GetEvalType()->GetSMTType());
+            // Set up the relevant variables as the aux vars
+            // which are essentially universally quantified
+            // as well as any aux vars which are used as an
+            // argument to a synth function
+            RelevantVars.insert(Op->GetName());
         }
 
         for (auto const& Op : DerivedAuxVars) {
             BaseExprs[Op->GetPosition()] =
                 TP->CreateVarExpr(Op->GetName(), Op->GetEvalType()->GetSMTType());
-        }
-
-
-        // Set up the relevant variables as the aux vars
-        // which are essentially universally quantified
-        // as well as any aux vars which are used as an
-        // argument to a synth function
-        for (auto const& Op : BaseAuxVars) {
-            RelevantVars.insert(Op->GetName());
         }
 
         // Assign IDs and delayed bindings to SynthFuncs
@@ -315,6 +322,29 @@ namespace ESolver {
             ExpEnumerator = new CFGEnumeratorSingle(this, SynthGrammars[0]);
         } else {
             ExpEnumerator = new CFGEnumeratorMulti(this, SynthGrammars);
+        }
+
+        // Check PBE mode and, if so, add concrete value point
+        bool IsSynthByExample = true;
+        if (ConstRelevantVars.size() != RelevantVars.size()) {
+            IsSynthByExample = false;
+        }
+        for (auto it = ConstRelevantVars.cbegin();
+             it < ConstRelevantVars.cend() && IsSynthByExample; ++it) {
+            if (RelevantVars.find((*it).first) == RelevantVars.end()) {
+                IsSynthByExample = false;
+            }
+        }
+        if (IsSynthByExample) {
+            if (Opts.StatsLevel >= 2) {
+                TheLogger.Log1("Switched solving mode to programming-by-example").Log1("\n");
+            }
+            Mode = CEGSolverMode::PBE;
+            SMTConcreteValueModel Model;
+            for (const auto& VarPair: ConstRelevantVars) {
+                TP->AddConcreteValueToModel(VarPair.first, VarPair.second, Model, this);
+            }
+            ConcEval->AddPoint(Model);
         }
 
         // Set up evaluation buffers/stacks for generated expressions
