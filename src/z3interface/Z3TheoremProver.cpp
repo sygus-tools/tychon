@@ -789,7 +789,7 @@ namespace ESolver {
         }
     }
 
-    static inline string ParseZ3BVString(const string& BVString,
+    static inline uint64 ParseZ3BVString(const string& BVString,
                                          const ESFixedTypeBase* Type)
     {
         char * TempPtr;
@@ -798,7 +798,7 @@ namespace ESolver {
         uint32 NumBits = (BVString.length()-2) * 4;
 
         assert(Type->As<ESBVType>()->GetSize() == NumBits);
-        return NumString;
+        return res;
     }
 
     void Z3TheoremProver::GetConcreteModel(const set<string>& RelevantVars,
@@ -806,29 +806,36 @@ namespace ESolver {
                                         SMTConcreteValueModel& ConcModel,
                                         ESolver* Solver)
     {
-        uint32 NumBits = 0, Shift = 0;
-        int64 ModelValue = 0;
         GetConcreteModel(RelevantVars, Model, Solver);
 
         // Parse the concrete model into ConcreteValues
         SMTModel::iterator ModelEnd = Model.end();
         for(SMTModel::iterator it = Model.begin(); it != ModelEnd; ++it) {
+            auto && Value = Z3_ast_to_string(TheContext, (it->second).AST);
+            AddConcreteValueToModel(it->first, Value, ConcModel, Solver);
+        }
+    }
 
-            string ValueString;
-            const OperatorBase* CurOp = Solver->LookupOperator(it->first);
-            auto VarOp = OperatorBase::As<VarOperatorBase>(CurOp);
-            auto AuxVarOp = OperatorBase::As<AuxVarOperator>(CurOp);
+    void Z3TheoremProver::AddConcreteValueToModel(const string& VarName,
+                                                  const string& ValueString,
+                                                  SMTConcreteValueModel& ConcModel,
+                                                  ESolver* Solver) const
+    {
+        uint32 NumBits = 0, Shift = 0;
+        uint64 ModelValue = 0;
+        const OperatorBase* CurOp = Solver->LookupOperator(VarName);
+        auto VarOp = OperatorBase::As<VarOperatorBase>(CurOp);
+        auto AuxVarOp = OperatorBase::As<AuxVarOperator>(CurOp);
 
-            if(VarOp == NULL && AuxVarOp == NULL) {
-                throw ModelGenException((string)"Error: Expected operator \"" + it->first + "\" to be a variable");
-            }
+        if(VarOp == NULL && AuxVarOp == NULL) {
+            throw ModelGenException((string)"Error: Expected operator \"" + VarName + "\" to be a variable");
+        }
 
-            const string& CurVarName = CurOp->GetName();
-            const ESFixedTypeBase* Type = CurOp->GetEvalType();
+        const string& CurVarName = CurOp->GetName();
+        const ESFixedTypeBase* Type = CurOp->GetEvalType();
 
-            switch(Type->GetBaseType()) {
+        switch(Type->GetBaseType()) {
             case BaseTypeBool:
-                ValueString = Z3_ast_to_string(TheContext, (it->second).AST);
                 if(ValueString == "true") {
                     ConcModel[CurVarName] = Solver->CreateValue(Type, (int64)1);
                 } else {
@@ -837,30 +844,24 @@ namespace ESolver {
                 break;
 
             case BaseTypeInt:
-                ValueString = Z3_ast_to_string(TheContext, (it->second).AST);
                 ConcModel[CurVarName] = Solver->CreateValue(Type, ValueString);
                 break;
 
             case BaseTypeEnum:
-                ValueString = Z3_ast_to_string(TheContext, (it->second).AST);
                 ConcModel[CurVarName] = Solver->CreateValue(Type, ValueString);
                 break;
 
             case BaseTypeBitVector:
-                ValueString = Z3_ast_to_string(TheContext, (it->second).AST);
-                ValueString = ParseZ3BVString(ValueString, Type);
+                ModelValue = ParseZ3BVString(ValueString, Type);
                 NumBits = Type->As<ESBVType>()->GetSize();
                 Shift = 64 - NumBits;
-                ModelValue = (int64)strtoll(ValueString.c_str(), NULL, 10);
                 ModelValue = (ModelValue << Shift) >> Shift;
-                ModelValue = ModelValue & (((uint64)1 << NumBits) - 1);
-                ConcModel[CurVarName] = Solver->CreateValue(Type, ModelValue);
+                ConcModel[CurVarName] = Solver->CreateValue(Type, *(int64 *)&ModelValue);
                 break;
 
             default:
                 throw InternalError((string)"Unhandled type in GetConcreteValue.\n" +
-                                    "At: " + __FILE__ + ":" + to_string(__LINE__));
-            }
+                    "At: " + __FILE__ + ":" + to_string(__LINE__));
         }
     }
 

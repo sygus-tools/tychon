@@ -197,6 +197,11 @@ namespace ESolver {
                                       SMTConcreteValueModel& ConcModel,
                                       ESolver* Solver) = 0;
 
+        virtual void AddConcreteValueToModel(const string& VarName,
+                                             const string& ValueString,
+                                             SMTConcreteValueModel& ConcModel,
+                                             ESolver* Solver) const = 0;
+
         virtual void GetAllAssertions(vector<SMTExpr>& Assertions) = 0;
 
         // Simplification
