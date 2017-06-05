@@ -3,7 +3,7 @@ project(tychon CXX)
 
 set(BUILD_TYPES debug opt optlto prof proflto)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -Wextra -pedantic\
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -Wall -Wextra -pedantic\
   -Wno-write-strings -Wno-unused-parameter -Wno-unused-function\
   -D__STDC_LIMIT_MACROS -DDISABLE_STATIC_BP"
   CACHE STRING "Flags used by the C++ compiler for all builds."
@@ -113,7 +113,7 @@ set(tychon_source_files
   ${tychon_source_dir}/visitors/ExpressionVisitorBase.cpp
   ${tychon_source_dir}/expressions/ExprManager.cpp
   ${tychon_source_dir}/expressions/GenExpression.cpp
-  ${tychon_source_dir}/expressions/UserExpression.cpp)
+  ${tychon_source_dir}/expressions/UserExpression.cpp src/visitors/PBEConsequentsInitializer.cpp src/visitors/PBEConsequentsInitializer.hpp)
 
 set(main_source_file
   ${tychon_source_dir}/main/ESolverSynthLib.cpp)

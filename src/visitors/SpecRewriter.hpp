@@ -60,6 +60,17 @@ namespace ESolver {
         static void Do(const Expression& Exp);
     };
 
+    class PBEParamMapFixup : public ExpressionVisitorBase
+    {
+    private:
+        const vector<uint32>& TheUpdatedParamMap;
+    public:
+        PBEParamMapFixup(const vector<uint32>& UpdatedParamMap);
+        virtual ~PBEParamMapFixup() = default;
+
+        virtual void VisitUserSynthFuncExpression(const UserSynthFuncExpression* Exp) override;
+    };
+
     class SpecRewriter : public ExpressionVisitorBase
     {
     private:
@@ -101,7 +112,8 @@ namespace ESolver {
                              vector<const AuxVarOperator*>& BaseAuxVarsOps,
                              vector<const AuxVarOperator*>& DerivedAuxVarOps,
                              vector<map<vector<uint32>, uint32>>& SynthFunAppMaps,
-                             vector<pair<string, string>>& ConstVars);
+                             vector<pair<string, string>>& ConstVars,
+                             vector<Expression>& PBEAntecedents);
     };
 
 } /* End namespace */

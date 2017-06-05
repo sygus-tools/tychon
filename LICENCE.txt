@@ -43,5 +43,5 @@ appropriate directory as well.
 The author and the University of Pennsylvania make no claims of
 ownership or having developed the code in the Spooky Hash Library.
 It is only packaged together for convenience of the user. The user must
-ensure that the licensing terms of this software packages is met as
+ensure that the licensing terms of this software packages are met as
 well.

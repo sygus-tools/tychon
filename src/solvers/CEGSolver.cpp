@@ -52,12 +52,13 @@
 #include "../visitors/ExpCheckers.hpp"
 #include "../visitors/SpecRewriter.hpp"
 #include "../visitors/Gatherers.hpp"
+#include "../visitors/PBEConsequentsInitializer.hpp"
 
 
 namespace ESolver {
 
     CEGSolver::CEGSolver(const ESolverOpts* Opts)
-        : ESolver(Opts), ConcEval(nullptr), ExpEnumerator(nullptr), Mode(CEGSolverMode::CEG)
+        : ESolver(Opts), ConcEval(nullptr), ExpEnumerator(nullptr), TheMode(CEGSolverMode::CEG)
     {
         // Nothing here
     }
@@ -161,6 +162,10 @@ namespace ESolver {
 
         CheckResourceLimits();
 
+        if (TheMode == CEGSolverMode::PBE) {
+            return ExpressionCallBackPBE(Exp, Type, ExpansionTypeID, EnumeratorIndex);
+        }
+
         auto ConcValid = ConcEval->CheckConcreteValidity(Exp, Type, ExpansionTypeID, StatusRet);
         if (!ConcValid && (StatusRet & CONCRETE_EVAL_DIST) == 0) {
             if (Opts.StatsLevel >= 4) {
@@ -195,11 +200,7 @@ namespace ESolver {
                                                    GenExpressionBase::ToUserExpression(Exp, this)));
             return STOP_ENUMERATION;
         } else {
-            if(Mode == CEGSolverMode::PBE) {
-                throw InternalError((string)"Internal Error: Symbolic validity should " +
-                    "always hold in Programming-by-Example mode" +
-                    "\nAt: " + __FILE__ + ":" + to_string(__LINE__));
-            }
+
             // Get the counter example and add it as a point
             SMTModel TheSMTModel;
             SMTConcreteValueModel ConcSMTModel;
@@ -216,6 +217,51 @@ namespace ESolver {
                 return NONE_STATUS;
             }
         }
+    }
+
+    CallbackStatus CEGSolver::ExpressionCallBackPBE(const GenExpressionBase* Exp,
+                                                    const ESFixedTypeBase* Type,
+                                                    uint32 ExpansionTypeID,
+                                                    uint32 EnumeratorIndex)
+    {
+        uint32 StatusRet = 0;
+        auto ConcValid = true;
+        for (uint32 i = 0; i < PBEEvals.size() && ConcValid; ++i) {
+            ConcValid = PBEEvals[i]->CheckConcreteValidity(Exp, Type, ExpansionTypeID, StatusRet);
+            if (!ConcValid && (StatusRet & CONCRETE_EVAL_DIST) == 0) {
+                if (Opts.StatsLevel >= 4) {
+                    TheLogger.Log4("ConcEval(").Log4(i).Log4("),");
+                    TheLogger.Log4("Invalid, Indist.").Log4("\n");
+                }
+                return DELETE_EXPRESSION;
+            } else if (!ConcValid) {
+                NumDistExpressions++;
+                if (Opts.StatsLevel >= 4) {
+                    if ((StatusRet & CONCRETE_EVAL_PART) != 0) {
+                        TheLogger.Log4("ConcEval(").Log4(i).Log4("),");
+                        TheLogger.Log4("Invalid, Dist (Partial).").Log4("\n");
+                    } else {
+                        TheLogger.Log4("ConcEval(").Log4(i).Log4("),");
+                        TheLogger.Log4("Invalid, Dist.").Log4("\n");
+                    }
+                }
+                return NONE_STATUS;
+            }
+
+            NumDistExpressions++;
+            if (Opts.StatsLevel >= 4) {
+                TheLogger.Log4("ConcEval(").Log4(i).Log4("),");
+                TheLogger.Log4("Valid.").Log4("\n");
+            }
+        }
+
+        this->Complete = true;
+        Solutions.push_back(vector<pair<const SynthFuncOperator*, Expression>>());
+        Solutions.back().push_back(pair<const SynthFuncOperator*,
+                                        Expression>(SynthFuncs[0],
+                                                    GenExpressionBase::ToUserExpression(Exp, this)));
+
+        return STOP_ENUMERATION;
     }
 
     // For multifunction synthesis
@@ -271,9 +317,13 @@ namespace ESolver {
         LetBindingChecker::Do(Constraint);
         // Rewrite the spec
         vector<pair<string, string>> ConstRelevantVars;
-        ConstRelevantVars.reserve(BaseAuxVars.size());
-        RewrittenConstraint = SpecRewriter::Do(this, Constraint, BaseAuxVars, DerivedAuxVars,
-                                               SynthFunAppMaps, ConstRelevantVars);
+        RewrittenConstraint = SpecRewriter::Do(this,
+                                               Constraint,
+                                               BaseAuxVars,
+                                               DerivedAuxVars,
+                                               SynthFunAppMaps,
+                                               ConstRelevantVars,
+                                               PBEAntecedentExprs);
 
         if (Opts.StatsLevel >= 2) {
             TheLogger.Log2("Rewritten Constraint:").Log2("\n");
@@ -324,27 +374,28 @@ namespace ESolver {
             ExpEnumerator = new CFGEnumeratorMulti(this, SynthGrammars);
         }
 
-        // Check PBE mode and, if so, add concrete value point
-        bool IsSynthByExample = true;
-        if (ConstRelevantVars.size() != RelevantVars.size()) {
-            IsSynthByExample = false;
-        }
-        for (auto it = ConstRelevantVars.cbegin();
-             it < ConstRelevantVars.cend() && IsSynthByExample; ++it) {
-            if (RelevantVars.find((*it).first) == RelevantVars.end()) {
-                IsSynthByExample = false;
+        vector<Expression> PBEConstraints;
+        vector<vector<const AuxVarOperator*>> PBEBaseAuxVarVecs;
+        vector<vector<const AuxVarOperator*>> PBEDerivedAuxVarVecs;
+        vector<map<vector<uint32>, uint32>> PBESynthFunAppMap;
+
+        // Check PBE mode and, if so, switch mode and do initialization
+        if (ConstRelevantVars.size() == RelevantVars.size() &&
+            ConstRelevantVars.size() == PBEAntecedentExprs.size()) {
+            TheMode = CEGSolverMode::PBE;
+            if (Opts.StatsLevel > 2) {
+                TheLogger.Log1("\n").Log1("Programming-by-example constraints detected").Log1("\n");
             }
-        }
-        if (IsSynthByExample) {
-            if (Opts.StatsLevel >= 2) {
-                TheLogger.Log1("Switched solving mode to programming-by-example").Log1("\n");
-            }
-            Mode = CEGSolverMode::PBE;
-            SMTConcreteValueModel Model;
-            for (const auto& VarPair: ConstRelevantVars) {
-                TP->AddConcreteValueToModel(VarPair.first, VarPair.second, Model, this);
-            }
-            ConcEval->AddPoint(Model);
+
+            PBEConsequentsInitializer::Do(RewrittenConstraint, PBEConsequentExprs);
+            auto MapIt = SynthFunAppMaps.back().cbegin();
+            PBESynthFunAppMap.push_back({{MapIt->first, MapIt->first.size()}});
+            PBEInitializeEvals(ConstRelevantVars,
+                               PBEConstraints,
+                               PBEBaseAuxVarVecs,
+                               PBEDerivedAuxVarVecs,
+                               PBESynthFunAppMap,
+                               SynthFuncTypes);
         }
 
         // Set up evaluation buffers/stacks for generated expressions
@@ -388,6 +439,49 @@ namespace ESolver {
         delete ExpEnumerator;
         ExpEnumerator = nullptr;
         return Solutions;
+    }
+
+    void CEGSolver::PBEInitializeEvals(vector<pair<string, string>>& ConstRelevantVars,
+                                   vector<Expression>& PBEConstraints,
+                                   vector<vector<const AuxVarOperator*>>& PBEBaseAuxVarVecs,
+                                   vector<vector<const AuxVarOperator*>>& PBEDerivedAuxVarVecs,
+                                   vector<map<vector<uint32>, uint32>>& PBESynthFunAppMap,
+                                   vector<const ESFixedTypeBase*>& SynthFuncTypes)
+    {
+        PBEConstraints.reserve(PBEAntecedentExprs.size());
+        PBEBaseAuxVarVecs.resize(PBEAntecedentExprs.size());
+        PBEDerivedAuxVarVecs.resize(PBEAntecedentExprs.size());
+
+        assert(SynthFunAppMaps.size() == 1
+                   && SynthFunAppMaps.back().size() == PBEAntecedentExprs.size()
+                   && "PBE does not support synthesis of multiple functions");
+
+        // TODO: generalize this to functions with arity > 1
+        auto AppMapIt = PBESynthFunAppMap.back().cbegin();
+        PBEParamMapFixup Fixer(AppMapIt->first);
+        for (uint i = 0; i < ConstRelevantVars.size(); ++i) {
+            PBEAntecedentExprs[i]->Accept(&Fixer);
+            PBEConstraints.push_back(CreateExpression("=>", PBEAntecedentExprs[i], PBEConsequentExprs[i]));
+            BaseAuxVars[i]->SetPosition(0);
+            PBEBaseAuxVarVecs[i].push_back(BaseAuxVars[i]);
+            DerivedAuxVars[i]->SetPosition(AppMapIt->second);
+            PBEDerivedAuxVarVecs[i].push_back(DerivedAuxVars[i]);
+        }
+
+        ConcreteEvaluator::PBEInitializeSigVecPool(1, PBEAntecedentExprs.size());
+        for (uint i = 0; i < ConstRelevantVars.size(); ++i) {
+            PBEEvals.push_back(make_unique<ConcreteEvaluator>(this,
+                                                              PBEConstraints[i],
+                                                              SynthFuncs.size(),
+                                                              PBEBaseAuxVarVecs[i],
+                                                              PBEDerivedAuxVarVecs[i],
+                                                              PBESynthFunAppMap,
+                                                              SynthFuncTypes,
+                                                              TheLogger, ConcEvaluatorMode::PBE));
+            SMTConcreteValueModel Model;
+            TP->AddConcreteValueToModel(ConstRelevantVars[i].first, ConstRelevantVars[i].second, Model, this);
+            PBEEvals.back()->AddPoint(Model);
+        }
     }
 
     void CEGSolver::EndSolve()

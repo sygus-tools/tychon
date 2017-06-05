@@ -77,12 +77,22 @@ namespace ESolver {
 
         uint64 NumExpressionsTried;
         uint64 NumDistExpressions;
-        CEGSolverMode Mode;
+        CEGSolverMode TheMode;
 
+        vector<Expression> PBEAntecedentExprs;
+        vector<Expression> PBEConsequentExprs;
+        vector<unique_ptr<ConcreteEvaluator>> PBEEvals;
         // Single function case
         inline bool CheckSymbolicValidity(const GenExpressionBase* Exp);
         // Multifunction case
         inline bool CheckSymbolicValidity(GenExpressionBase const* const* Exps);
+
+        void PBEInitializeEvals(vector<pair<string, string>>& ConstRelevantVars,
+                                vector<Expression>& PBEConstraints,
+                                vector<vector<const AuxVarOperator*>>& PBEBaseAuxVarVecs,
+                                vector<vector<const AuxVarOperator*>>& PBEDerivedAuxVarVecs,
+                                vector<map<vector<uint32>,uint32>>& PBESynthFunAppMap,
+                                vector<const ESFixedTypeBase*>& SynthFuncTypes);
 
     public:
         CEGSolver(const ESolverOpts* Opts);
@@ -96,6 +106,11 @@ namespace ESolver {
                                                   const ESFixedTypeBase* Type,
                                                   uint32 ExpansionTypeID,
                                                   uint32 EnumeratorIndex = 0) override;
+
+        virtual CallbackStatus ExpressionCallBackPBE(const GenExpressionBase* Exp,
+                                                     const ESFixedTypeBase* Type,
+                                                     uint32 ExpansionTypeID,
+                                                     uint32 EnumeratorIndex = 0);
         // For multifunction synthesis
         virtual CallbackStatus ExpressionCallBack(GenExpressionBase const* const* Exp,
                                                   ESFixedTypeBase const* const* Type,

@@ -164,6 +164,7 @@ namespace ESolver {
     class SpecCheckVisitor;
     class VarGatherer;
     class SpecRewriter;
+    class PBEConsequentsInitializer;
 
     // Hashers and Equality
     class TypeHasher;

@@ -52,6 +52,11 @@
 
 namespace ESolver {
 
+    enum class ConcEvaluatorMode {
+        Default,
+        PBE
+    };
+
     /*
       This is a class for managing concrete examples
       and evaluating them
@@ -88,6 +93,7 @@ namespace ESolver {
 
         // The pool for signatures
         static boost::pool<>* SigVecPool;
+        ConcEvaluatorMode TheMode;
 
     public:
         ConcreteEvaluator(ESolver* Solver,
@@ -97,12 +103,15 @@ namespace ESolver {
                           const vector<const AuxVarOperator*>& DerivedAuxVars,
                           const vector<map<vector<uint32>, uint32>>& SynthFunAppMaps,
                           const vector<const ESFixedTypeBase*>& SynthFuncTypes,
-                          Logger& TheLogger);
+                          Logger& TheLogger, ConcEvaluatorMode Mode = ConcEvaluatorMode::Default);
 
 
         ~ConcreteEvaluator();
 
         void AddPoint(const SMTConcreteValueModel& Model);
+
+        static void PBEInitializeSigVecPool(uint FunArity,
+                                            uint NumExamplePoints);
 
         // For multiple function synthesis
         bool CheckConcreteValidity(GenExpressionBase const* const* Exps,

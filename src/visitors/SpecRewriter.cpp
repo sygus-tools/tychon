@@ -46,7 +46,7 @@
 
 namespace ESolver {
 
-SpecRewriter::SpecRewriter(ESolver* Solver, uint32 NumSynthFuncs)
+    SpecRewriter::SpecRewriter(ESolver* Solver, uint32 NumSynthFuncs)
         : ExpressionVisitorBase("SpecRewriter"),
           SynthFunArgOps((size_t)NumSynthFuncs),
           Solver(Solver),
@@ -235,7 +235,8 @@ SpecRewriter::SpecRewriter(ESolver* Solver, uint32 NumSynthFuncs)
                                 vector<const AuxVarOperator*>& BaseAuxVarOps,
                                 vector<const AuxVarOperator*>& DerivedAuxVarOps,
                                 vector<map<vector<uint32>, uint32>>& SynthFunAppMaps,
-                                vector<pair<string, string>>& ConstVars)
+                                vector<pair<string, string>>& ConstVars,
+                                vector<Expression>& PBEAntecedents)
     {
         auto&& SynthFuncs = SynthFuncGatherer::Do(Exp);
         const uint32 NumSynthFuncs = SynthFuncs.size();
@@ -294,10 +295,23 @@ SpecRewriter::SpecRewriter(ESolver* Solver, uint32 NumSynthFuncs)
 
         auto RewrittenConstraint = Rewriter.RewriteStack.back();
         auto Antecedent = Solver->CreateTrueExpression();
+        uint32 ConstVarNum = 0;
         for (auto const& EvalRule : EvalRules) {
             auto LHSVar = Solver->CreateExpression(EvalRule.GetLHS());
             if (EvalRule.GetRHS()->GetOp()->GetArity() == 0){
                 ConstVars.push_back({LHSVar->ToString(), EvalRule.GetRHS()->ToString()});
+                PBEAntecedents.emplace_back(Solver->CreateExpression("=", EvalRule.GetRHS(), LHSVar));
+                ++ConstVarNum;
+            } else if (EvalRule.GetRHS()->GetOp()->GetArity() == ConstVarNum) {
+                auto CombinedExpr =
+                    Solver->CreateExpression("and", PBEAntecedents.back(),
+                                             Solver->CreateExpression("=",
+                                                                      EvalRule.GetRHS(),
+                                                                      LHSVar));
+
+                PBEAntecedents.pop_back();
+                PBEAntecedents.push_back(CombinedExpr);
+                ConstVarNum = 0;
             }
             Antecedent =
                 Solver->CreateExpression("and", Antecedent,
@@ -343,6 +357,18 @@ SpecRewriter::SpecRewriter(ESolver* Solver, uint32 NumSynthFuncs)
         return;
     }
 
+    PBEParamMapFixup::PBEParamMapFixup(const vector<uint32>& UpdatedParamMap)
+        :ExpressionVisitorBase("PBEParamMapFixup"), TheUpdatedParamMap(UpdatedParamMap)
+    {
+    }
+
+    void PBEParamMapFixup::VisitUserSynthFuncExpression(const UserSynthFuncExpression* Exp)
+    {
+        auto ParamMap = Exp->GetParamMap();
+        for (uint32 i = 0; i < TheUpdatedParamMap.size(); ++i) {
+            ParamMap[i] = TheUpdatedParamMap[i];
+        }
+    }
 } /* End namespace */
 
 

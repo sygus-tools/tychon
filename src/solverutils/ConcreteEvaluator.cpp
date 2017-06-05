@@ -46,6 +46,7 @@
 #include "../values/ConcreteValueBase.hpp"
 #include "../solverutils/EvalRule.hpp"
 #include "../expressions/GenExpression.hpp"
+#include "../solvers/CEGSolver.hpp"
 
 namespace ESolver {
 
@@ -63,7 +64,8 @@ namespace ESolver {
                                          const vector<const AuxVarOperator*>& DerivedAuxVars,
                                          const vector<map<vector<uint32>, uint32>>& SynthFunAppMaps,
                                          const vector<const ESFixedTypeBase*>& SynthFuncTypes,
-                                         Logger& TheLogger)
+                                         Logger& TheLogger,
+                                         ConcEvaluatorMode Mode)
         : Solver(Solver),
           RewrittenSpec(RewrittenSpec),
           BaseAuxVars(BaseAuxVars), DerivedAuxVars(DerivedAuxVars),
@@ -74,7 +76,7 @@ namespace ESolver {
           NumTotalAuxVars(BaseAuxVars.size() + DerivedAuxVars.size()),
           NumSynthFuncs(NumSynthFuncs),
           NoDist(Solver->GetOpts().NoDist), TheLogger(TheLogger),
-          NumPoints(0), SigPool(nullptr)
+          NumPoints(0), SigPool(nullptr), TheMode(Mode)
     {
         for (uint32 i = 0, last = SynthFunAppMaps.size(); i < last; ++i) {
             this->SynthFunAppMaps[i] =
@@ -88,6 +90,7 @@ namespace ESolver {
     {
         if (SigVecPool != nullptr) {
             delete SigVecPool;
+            SigVecPool = nullptr;
         }
         if (SigPool != nullptr) {
             delete SigPool;
@@ -111,14 +114,15 @@ namespace ESolver {
                                                                     nullptr));
 
         // Recreate the pool for the new size
-        if (SigVecPool != nullptr) {
+        if (SigVecPool != nullptr && TheMode != ConcEvaluatorMode::PBE) {
             delete SigVecPool;
             SigVecPool = nullptr;
         }
-
-        SigVecPool =
-            new boost::pool<>(sizeof(ConcreteValueBase const*) *
-                              NumSynthFunApps * (NumPoints + 1));
+        if (TheMode != ConcEvaluatorMode::PBE) {
+            SigVecPool =
+                new boost::pool<>(sizeof(ConcreteValueBase const*) *
+                    NumSynthFunApps * (NumPoints + 1));
+        }
 
         // Clear all the accumulated signatures
         SigSet.clear();
@@ -171,6 +175,20 @@ namespace ESolver {
         }
 
         ++NumPoints;
+    }
+
+    void ConcreteEvaluator::PBEInitializeSigVecPool(uint FunArity,
+                                                    uint NumExamplePoints)
+    {
+        // Recreate the pool for the new size
+        if (SigVecPool != nullptr) {
+            delete SigVecPool;
+            SigVecPool = nullptr;
+        }
+
+        SigVecPool =
+            new boost::pool<>(sizeof(ConcreteValueBase const*) *
+                FunArity * (NumExamplePoints + 1));
     }
 
     bool ConcreteEvaluator::CheckSubExpressions(GenExpressionBase const* const* Exps,
