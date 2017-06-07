@@ -88,10 +88,6 @@ namespace ESolver {
 
     ConcreteEvaluator::~ConcreteEvaluator()
     {
-        if (SigVecPool != nullptr) {
-            delete SigVecPool;
-            SigVecPool = nullptr;
-        }
         if (SigPool != nullptr) {
             delete SigPool;
         }
@@ -177,8 +173,8 @@ namespace ESolver {
         ++NumPoints;
     }
 
-    void ConcreteEvaluator::PBEInitializeSigVecPool(uint FunArity,
-                                                    uint NumExamplePoints)
+    void ConcreteEvaluator::PBEInitialize(uint FunArity,
+                                          uint NumExamplePoints)
     {
         // Recreate the pool for the new size
         if (SigVecPool != nullptr) {
@@ -189,6 +185,14 @@ namespace ESolver {
         SigVecPool =
             new boost::pool<>(sizeof(ConcreteValueBase const*) *
                 FunArity * (NumExamplePoints + 1));
+    }
+
+    void ConcreteEvaluator::Finalize()
+    {
+        if (SigVecPool != nullptr) {
+            delete SigVecPool;
+            SigVecPool = nullptr;
+        }
     }
 
     bool ConcreteEvaluator::CheckSubExpressions(GenExpressionBase const* const* Exps,

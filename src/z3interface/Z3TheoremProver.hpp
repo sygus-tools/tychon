@@ -203,7 +203,7 @@ namespace ESolver {
         virtual void AddConcreteValueToModel(const string& VarName,
                                              const string& ValueString,
                                              SMTConcreteValueModel& ConcModel,
-                                             ESolver* Solver) const;
+                                             ESolver* Solver) const override;
 
         virtual void GetAllAssertions(vector<SMTExpr>& Assertions) override;
 

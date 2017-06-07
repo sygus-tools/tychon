@@ -66,6 +66,7 @@ namespace ESolver {
     CEGSolver::~CEGSolver()
     {
         if (ConcEval != nullptr) {
+            ConcEval->Finalize();
             delete ConcEval;
         }
         if (ExpEnumerator != nullptr) {
@@ -225,9 +226,25 @@ namespace ESolver {
                                                     uint32 EnumeratorIndex)
     {
         uint32 StatusRet = 0;
-        auto ConcValid = true;
+        bool ConcValidPrev = false;
+        bool ConcValid = true;
         for (uint32 i = 0; i < PBEEvals.size() && ConcValid; ++i) {
+            if (PBEEvals[i] == nullptr){
+                continue;
+            }
             ConcValid = PBEEvals[i]->CheckConcreteValidity(Exp, Type, ExpansionTypeID, StatusRet);
+            if (ConcValid) {
+                if (ConcValidPrev) {
+                    // reset redundant examples
+                    PBEEvals[i].reset(nullptr);
+                    if (Opts.StatsLevel >= 4) {
+                        TheLogger.Log4("Redundant example detected! ");
+                    }
+                }
+                ConcValidPrev = true;
+            } else {
+                ConcValidPrev = false;
+            }
             if (!ConcValid && (StatusRet & CONCRETE_EVAL_DIST) == 0) {
                 if (Opts.StatsLevel >= 4) {
                     TheLogger.Log4("ConcEval(").Log4(i).Log4("),");
@@ -235,22 +252,26 @@ namespace ESolver {
                 }
                 return DELETE_EXPRESSION;
             } else if (!ConcValid) {
-                NumDistExpressions++;
+                if (i == 0) {
+                    NumDistExpressions++;
+                }
                 if (Opts.StatsLevel >= 4) {
                     if ((StatusRet & CONCRETE_EVAL_PART) != 0) {
-                        TheLogger.Log4("ConcEval(").Log4(i).Log4("),");
+                        TheLogger.Log4("ConcEval(").Log4(i).Log4("), ");
                         TheLogger.Log4("Invalid, Dist (Partial).").Log4("\n");
                     } else {
-                        TheLogger.Log4("ConcEval(").Log4(i).Log4("),");
+                        TheLogger.Log4("ConcEval(").Log4(i).Log4("), ");
                         TheLogger.Log4("Invalid, Dist.").Log4("\n");
                     }
                 }
                 return NONE_STATUS;
             }
 
-            NumDistExpressions++;
+            if (i == 0) {
+                NumDistExpressions++;
+            }
             if (Opts.StatsLevel >= 4) {
-                TheLogger.Log4("ConcEval(").Log4(i).Log4("),");
+                TheLogger.Log4("ConcEval(").Log4(i).Log4("), ");
                 TheLogger.Log4("Valid.").Log4("\n");
             }
         }
@@ -468,7 +489,7 @@ namespace ESolver {
             PBEDerivedAuxVarVecs[i].push_back(DerivedAuxVars[i]);
         }
 
-        ConcreteEvaluator::PBEInitializeSigVecPool(1, PBEAntecedentExprs.size());
+        ConcreteEvaluator::PBEInitialize(1, PBEAntecedentExprs.size());
         for (uint i = 0; i < ConstRelevantVars.size(); ++i) {
             PBEEvals.push_back(make_unique<ConcreteEvaluator>(this,
                                                               PBEConstraints[i],

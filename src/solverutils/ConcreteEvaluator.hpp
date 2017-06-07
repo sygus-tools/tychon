@@ -110,8 +110,9 @@ namespace ESolver {
 
         void AddPoint(const SMTConcreteValueModel& Model);
 
-        static void PBEInitializeSigVecPool(uint FunArity,
-                                            uint NumExamplePoints);
+        static void PBEInitialize(uint FunArity, uint NumExamplePoints);
+
+        static void Finalize();
 
         // For multiple function synthesis
         bool CheckConcreteValidity(GenExpressionBase const* const* Exps,
