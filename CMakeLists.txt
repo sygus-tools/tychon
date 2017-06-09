@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.3)
 project(tychon CXX)
 
-set(BUILD_TYPES debug opt optlto prof proflto)
+set(BUILD_TYPES debug opt optlto profgen proflto)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -Wextra -pedantic\
   -Wno-write-strings -Wno-unused-parameter -Wno-unused-function\
@@ -50,15 +50,17 @@ set(CMAKE_CXX_FLAGS_OPT "-O2 -g" CACHE STRING
   "Flags used by the C++ compiler during opt builds."
   FORCE)
 
-set(CMAKE_CXX_FLAGS_OPTLTO "-O3 -flto=n -march=native" CACHE STRING
+set(CMAKE_CXX_FLAGS_OPTLTO "-O3 -flto=n" CACHE STRING
   "Flags used by the C++ compiler during optlto builds."
   FORCE)
 
-set(CMAKE_CXX_FLAGS_PROF "-O3 -pg" CACHE STRING
+set(PROFILE_DIR "${CMAKE_SOURCE_DIR}/bin/prof")
+
+set(CMAKE_CXX_FLAGS_PROFGEN "-O3 -fprofile-generate=${PROFILE_DIR}" CACHE STRING
   "Flags used by the C++ compiler during prof builds."
   FORCE)
 
-set(CMAKE_CXX_FLAGS_PROFLTO "-O3 -flto=n -pg" CACHE STRING
+set(CMAKE_CXX_FLAGS_PROFLTO "-O3 -flto=n -fprofile-use=${PROFILE_DIR}" CACHE STRING
   "Flags used by the C++ compiler during proflto builds."
   FORCE)
 
