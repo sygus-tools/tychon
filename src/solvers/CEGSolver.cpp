@@ -329,12 +329,6 @@ namespace ESolver {
         if (ConstRelevantVars.size() != RelevantVars.size()) {
             IsSynthByExample = false;
         }
-        for (auto it = ConstRelevantVars.cbegin();
-             it < ConstRelevantVars.cend() && IsSynthByExample; ++it) {
-            if (RelevantVars.find((*it).first) == RelevantVars.end()) {
-                IsSynthByExample = false;
-            }
-        }
         if (IsSynthByExample) {
             if (Opts.StatsLevel >= 2) {
                 TheLogger.Log1("Switched solving mode to programming-by-example").Log1("\n");
