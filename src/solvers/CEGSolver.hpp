@@ -81,7 +81,8 @@ namespace ESolver {
 
         vector<Expression> PBEAntecedentExprs;
         vector<Expression> PBEConsequentExprs;
-        vector<unique_ptr<ConcreteEvaluator>> PBEEvals;
+        vector<unique_ptr<ConcreteEvaluator>> PBEEvalPtrs;
+
         // Single function case
         inline bool CheckSymbolicValidity(const GenExpressionBase* Exp);
         // Multifunction case

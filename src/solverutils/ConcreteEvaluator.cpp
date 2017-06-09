@@ -56,6 +56,11 @@ namespace ESolver {
     // and could not be evaluated
     bool PartialExpression = false;
 
+    SigSetType ConcreteEvaluator::SigSet;
+
+    // Pool for the signature objects
+    boost::pool<>* ConcreteEvaluator::SigPool = nullptr;
+
     boost::pool<>* ConcreteEvaluator::SigVecPool = nullptr;
 
     ConcreteEvaluator::ConcreteEvaluator(ESolver* Solver, const Expression& RewrittenSpec,
@@ -65,7 +70,7 @@ namespace ESolver {
                                          const vector<map<vector<uint32>, uint32>>& SynthFunAppMaps,
                                          const vector<const ESFixedTypeBase*>& SynthFuncTypes,
                                          Logger& TheLogger,
-                                         ConcEvaluatorMode Mode)
+                                         uint32 EvalId)
         : Solver(Solver),
           RewrittenSpec(RewrittenSpec),
           BaseAuxVars(BaseAuxVars), DerivedAuxVars(DerivedAuxVars),
@@ -76,7 +81,7 @@ namespace ESolver {
           NumTotalAuxVars(BaseAuxVars.size() + DerivedAuxVars.size()),
           NumSynthFuncs(NumSynthFuncs),
           NoDist(Solver->GetOpts().NoDist), TheLogger(TheLogger),
-          NumPoints(0), SigPool(nullptr), TheMode(Mode)
+          NumPoints(0), TheId(EvalId)
     {
         for (uint32 i = 0, last = SynthFunAppMaps.size(); i < last; ++i) {
             this->SynthFunAppMaps[i] =
@@ -88,10 +93,6 @@ namespace ESolver {
 
     ConcreteEvaluator::~ConcreteEvaluator()
     {
-        if (SigPool != nullptr) {
-            delete SigPool;
-        }
-
         for (uint32 i = 0; i < NumPoints; ++i) {
             for (uint32 j = 0; j < NumSynthFunApps; ++j) {
                 delete SubExpEvalPoints[i][j];
@@ -108,25 +109,7 @@ namespace ESolver {
         // Add another row to SubExpEvalPoints
         SubExpEvalPoints.push_back(vector<const ConcreteValueBase*>((size_t)NumSynthFunApps,
                                                                     nullptr));
-
-        // Recreate the pool for the new size
-        if (SigVecPool != nullptr && TheMode != ConcEvaluatorMode::PBE) {
-            delete SigVecPool;
-            SigVecPool = nullptr;
-        }
-        if (TheMode != ConcEvaluatorMode::PBE) {
-            SigVecPool =
-                new boost::pool<>(sizeof(ConcreteValueBase const*) *
-                    NumSynthFunApps * (NumPoints + 1));
-        }
-
-        // Clear all the accumulated signatures
-        SigSet.clear();
-        if (SigPool != nullptr) {
-            delete SigPool;
-        }
-
-        SigPool = new boost::pool<>(sizeof(Signature));
+        ResetSigStore(NumSynthFunApps, NumPoints + 1);
 
         for(uint32 i = 0; i < NumBaseAuxVars; ++i) {
             auto it = Model.find(BaseAuxVars[i]->GetName());
@@ -173,8 +156,85 @@ namespace ESolver {
         ++NumPoints;
     }
 
-    void ConcreteEvaluator::PBEInitialize(uint FunArity,
-                                          uint NumExamplePoints)
+    // Similar to AddPoint but doesn't reset signatures
+    void ConcreteEvaluator::AddPBEPoint(const SMTConcreteValueModel& Model)
+    {
+        // Add another point
+        Points.push_back(vector<const ConcreteValueBase*>((size_t)NumBaseAuxVars, nullptr));
+        // Add another row to EvalPoints
+        EvalPoints.push_back(vector<const ConcreteValueBase*>((size_t)NumTotalAuxVars, nullptr));
+        // Add another row to SubExpEvalPoints
+        SubExpEvalPoints.push_back(vector<const ConcreteValueBase*>((size_t)NumSynthFunApps,
+                                                                    nullptr));
+
+        for(uint32 i = 0; i < NumBaseAuxVars; ++i) {
+            auto it = Model.find(BaseAuxVars[i]->GetName());
+            if (it == Model.end()) {
+                throw InternalError((string)"Internal Error: Could not find model for " +
+                    "variable \"" + BaseAuxVars[i]->GetName() +
+                    "\".\nAt: " + __FILE__ + ":" + to_string(__LINE__));
+            }
+
+            EvalPoints[NumPoints][BaseAuxVars[i]->GetPosition()] = it->second;
+            Points[NumPoints][BaseAuxVars[i]->GetPosition()] = it->second;
+        }
+
+        uint32 k = 0;
+        for (uint32 i = 0; i < NumSynthFuncs; ++i) {
+            for (uint32 j = 0; j < SynthFunAppMaps[i].size(); ++j) {
+                EvalPoints[NumPoints][SynthFunAppMaps[i][j].second] =
+                SubExpEvalPoints[NumPoints][k] = new ConcreteValueBase();
+                ++k;
+            }
+        }
+
+        if (Solver->GetOpts().StatsLevel >= 3) {
+            TheLogger.Log3("Adding point: <");
+            for(uint32 i = 0; i < NumBaseAuxVars; ++i) {
+                TheLogger.Log2(Points.back()[i]->ToSimpleString());
+                if(i != NumBaseAuxVars - 1) {
+                    TheLogger.Log3(", ");
+                }
+            }
+            TheLogger.Log3(">, Evaluator<").Log3(TheId).Log3(">\n");
+        }
+
+        // Check for duplicates
+        for(uint32 i = 0; i < NumPoints; ++i) {
+            if(memcmp(Points[NumPoints].data(), Points[i].data(),
+                      sizeof(ConcreteValueBase const*) * NumBaseAuxVars) == 0) {
+                throw InternalError((string)"Error: Tried to add a duplicate point to the " +
+                    "Concrete Evaluator!\nAt: " + __FILE__ + ":" +
+                    to_string(__LINE__));
+            }
+        }
+
+        ++NumPoints;
+    }
+
+    void ConcreteEvaluator::AddPBEDistPoint(const ConcreteValueBase* Value)
+    {
+        PBEDistPoints.push_back(Value);
+    }
+
+    bool ConcreteEvaluator::IsPBEDistinguishable(GenExpressionBase* Exp) const
+    {
+        ConcreteValueBase Result(SubExpEvalPoints[0][0]->GetType(), 0);
+        for (auto DistPoint: PBEDistPoints) {
+            uint32 j = 0;
+            for (auto const& AppMapTargetPos : SynthFunAppMaps[0]) {
+                auto const& AppMap = AppMapTargetPos.first;
+                GenExpressionBase::Evaluate(Exp, &DistPoint, AppMap.data(), &Result);
+                if (Result.GetValue() != SubExpEvalPoints[0][j]->GetValue()) {
+                    return false;
+                }
+                ++j;
+            }
+        }
+        return true;
+    }
+
+    void ConcreteEvaluator::ResetSigStore(uint FunArity, uint NumPoints)
     {
         // Recreate the pool for the new size
         if (SigVecPool != nullptr) {
@@ -184,7 +244,16 @@ namespace ESolver {
 
         SigVecPool =
             new boost::pool<>(sizeof(ConcreteValueBase const*) *
-                FunArity * (NumExamplePoints + 1));
+                FunArity * (NumPoints));
+
+
+        // Clear all the accumulated signatures
+        SigSet.clear();
+        if (SigPool != nullptr) {
+            delete SigPool;
+        }
+
+        SigPool = new boost::pool<>(sizeof(Signature));
     }
 
     void ConcreteEvaluator::Finalize()
@@ -193,6 +262,12 @@ namespace ESolver {
             delete SigVecPool;
             SigVecPool = nullptr;
         }
+
+        if (ConcreteEvaluator::SigPool != nullptr) {
+            delete ConcreteEvaluator::SigPool;
+        }
+
+        ConcreteEvaluator::SigSet.clear();
     }
 
     bool ConcreteEvaluator::CheckSubExpressions(GenExpressionBase const* const* Exps,
@@ -262,6 +337,11 @@ namespace ESolver {
             }
         }
 
+        if (TheId != 0) {
+            // Signatures are maintained for only one ConcEvaluator
+            return true;
+        }
+
         // Check if we have encountered this signature before
         auto Sig =
             new (SigPool->malloc()) Signature(NumPoints * NumSynthFunApps,
@@ -274,10 +354,15 @@ namespace ESolver {
             }
         }
 
-        // Have we see this signature before?
+        // Have we seen this signature before?
         if (SigSet.find(Sig) != SigSet.end()) {
             SigVecPool->free(Sig->ValVec);
             SigPool->free(Sig);
+
+            // check is effective in PBE mode only
+            if (PBEDistPoints.size() > 0 && !IsPBEDistinguishable(Exp)) {
+                return true;
+            }
             Status &= ~(CONCRETE_EVAL_DIST);
             return false;
         } else {

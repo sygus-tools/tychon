@@ -154,6 +154,11 @@ namespace ESolver {
                                                  uint32 ExpansionTypeID,
                                                  uint32 EnumeratorIndex)
     {
+
+        if (TheMode == CEGSolverMode::PBE) {
+            return ExpressionCallBackPBE(Exp, Type, ExpansionTypeID, EnumeratorIndex);
+        }
+
         uint32 StatusRet = 0;
 
         NumExpressionsTried++;
@@ -163,11 +168,10 @@ namespace ESolver {
 
         CheckResourceLimits();
 
-        if (TheMode == CEGSolverMode::PBE) {
-            return ExpressionCallBackPBE(Exp, Type, ExpansionTypeID, EnumeratorIndex);
-        }
-
-        auto ConcValid = ConcEval->CheckConcreteValidity(Exp, Type, ExpansionTypeID, StatusRet);
+        auto ConcValid = ConcEval->CheckConcreteValidity(Exp,
+                                                         Type,
+                                                         ExpansionTypeID,
+                                                         StatusRet);
         if (!ConcValid && (StatusRet & CONCRETE_EVAL_DIST) == 0) {
             if (Opts.StatsLevel >= 4) {
                 TheLogger.Log4("Invalid, Indist.").Log4("\n");
@@ -205,10 +209,7 @@ namespace ESolver {
             // Get the counter example and add it as a point
             SMTModel TheSMTModel;
             SMTConcreteValueModel ConcSMTModel;
-            TP->GetConcreteModel(RelevantVars,
-                                 TheSMTModel,
-                                 ConcSMTModel,
-                                 this);
+            TP->GetConcreteModel(RelevantVars, TheSMTModel, ConcSMTModel, this);
             ConcEval->AddPoint(ConcSMTModel);
 
             if (!Opts.NoDist) {
@@ -225,54 +226,74 @@ namespace ESolver {
                                                     uint32 ExpansionTypeID,
                                                     uint32 EnumeratorIndex)
     {
+        CheckResourceLimits();
+        NumExpressionsTried++;
+        if (Opts.StatsLevel >= 4) {
+            TheLogger.Log4(Exp->ToString()).Log4("... ");
+        }
+
         uint32 StatusRet = 0;
-        bool ConcValidPrev = false;
-        bool ConcValid = true;
-        for (uint32 i = 0; i < PBEEvals.size() && ConcValid; ++i) {
-            if (PBEEvals[i] == nullptr){
-                continue;
-            }
-            ConcValid = PBEEvals[i]->CheckConcreteValidity(Exp, Type, ExpansionTypeID, StatusRet);
-            if (ConcValid) {
-                if (ConcValidPrev) {
-                    // reset redundant examples
-                    PBEEvals[i].reset(nullptr);
-                    if (Opts.StatsLevel >= 4) {
-                        TheLogger.Log4("Redundant example detected! ");
-                    }
-                }
-                ConcValidPrev = true;
-            } else {
-                ConcValidPrev = false;
-            }
-            if (!ConcValid && (StatusRet & CONCRETE_EVAL_DIST) == 0) {
+        uint32 FirstDupValidEval = 0;
+        bool IsSetFirstDupValidEval = false;
+        bool ConcValid = PBEEvalPtrs[0]->CheckConcreteValidity(Exp,
+                                                               Type,
+                                                               ExpansionTypeID,
+                                                               StatusRet);
+        if (!ConcValid) {
+            if((StatusRet & CONCRETE_EVAL_DIST) == 0){
                 if (Opts.StatsLevel >= 4) {
-                    TheLogger.Log4("ConcEval(").Log4(i).Log4("),");
                     TheLogger.Log4("Invalid, Indist.").Log4("\n");
                 }
                 return DELETE_EXPRESSION;
-            } else if (!ConcValid) {
-                if (i == 0) {
-                    NumDistExpressions++;
+            }
+            if (Opts.StatsLevel >= 4) {
+                if ((StatusRet & CONCRETE_EVAL_PART) != 0) {
+                    TheLogger.Log4("Invalid, Dist (Partial).").Log4("\n");
+                } else {
+                    TheLogger.Log4("Invalid, Dist.").Log4("\n");
+                }
+            }
+            NumDistExpressions++;
+            return NONE_STATUS;
+        }
+
+        NumDistExpressions++;
+        if (Opts.StatsLevel >= 4) {
+            TheLogger.Log4("Valid.").Log4("\n");
+        }
+
+        for (uint32 i = 1; i < PBEEvalPtrs.size() && ConcValid; ++i) {
+            ConcValid = PBEEvalPtrs[i]->CheckConcreteValidity(Exp,
+                                                              Type,
+                                                              ExpansionTypeID,
+                                                              StatusRet);
+
+            if (!ConcValid) {
+                if (IsSetFirstDupValidEval) {
+                    // bring interesting examples forward
+                    iter_swap(PBEEvalPtrs.begin() + FirstDupValidEval,
+                              PBEEvalPtrs.begin() + i);
+                    if (Opts.StatsLevel >= 4) {
+                        TheLogger.Log4("Swapping ConcEval(").Log4(i).Log4(") ");
+                        TheLogger.Log4("and ConcEval(").Log4(FirstDupValidEval).Log4(") \n");
+                    }
                 }
                 if (Opts.StatsLevel >= 4) {
-                    if ((StatusRet & CONCRETE_EVAL_PART) != 0) {
-                        TheLogger.Log4("ConcEval(").Log4(i).Log4("), ");
-                        TheLogger.Log4("Invalid, Dist (Partial).").Log4("\n");
-                    } else {
-                        TheLogger.Log4("ConcEval(").Log4(i).Log4("), ");
-                        TheLogger.Log4("Invalid, Dist.").Log4("\n");
-                    }
+                    TheLogger.Log4("ConcEval(").Log4(i).Log4("), ");
+                    TheLogger.Log4("Invalid, Dist.").Log4("\n");
+
                 }
                 return NONE_STATUS;
             }
 
-            if (i == 0) {
-                NumDistExpressions++;
+            if (!IsSetFirstDupValidEval) {
+                FirstDupValidEval = i;
+                IsSetFirstDupValidEval = true;
             }
+
             if (Opts.StatsLevel >= 4) {
                 TheLogger.Log4("ConcEval(").Log4(i).Log4("), ");
-                TheLogger.Log4("Valid.").Log4("\n");
+                TheLogger.Log4("Duplicate valid.").Log4("\n");
             }
         }
 
@@ -384,10 +405,6 @@ namespace ESolver {
             SynthFuncTypes[i] = SynthFuncs[i]->GetEvalType();
         }
 
-        // Create the concrete evaluator
-        ConcEval = new ConcreteEvaluator(this, RewrittenConstraint, SynthFuncs.size(),
-                                         BaseAuxVars, DerivedAuxVars, SynthFunAppMaps,
-                                         SynthFuncTypes, TheLogger);
         // Create the enumerator
         if (NumSynthFuncs == 1) {
             ExpEnumerator = new CFGEnumeratorSingle(this, SynthGrammars[0]);
@@ -417,6 +434,11 @@ namespace ESolver {
                                PBEDerivedAuxVarVecs,
                                PBESynthFunAppMap,
                                SynthFuncTypes);
+        } else {
+            // Create the concrete evaluator
+            ConcEval = new ConcreteEvaluator(this, RewrittenConstraint, SynthFuncs.size(),
+                                             BaseAuxVars, DerivedAuxVars, SynthFunAppMaps,
+                                             SynthFuncTypes, TheLogger);
         }
 
         // Set up evaluation buffers/stacks for generated expressions
@@ -489,20 +511,29 @@ namespace ESolver {
             PBEDerivedAuxVarVecs[i].push_back(DerivedAuxVars[i]);
         }
 
-        ConcreteEvaluator::PBEInitialize(1, PBEAntecedentExprs.size());
         for (uint i = 0; i < ConstRelevantVars.size(); ++i) {
-            PBEEvals.push_back(make_unique<ConcreteEvaluator>(this,
-                                                              PBEConstraints[i],
-                                                              SynthFuncs.size(),
-                                                              PBEBaseAuxVarVecs[i],
-                                                              PBEDerivedAuxVarVecs[i],
-                                                              PBESynthFunAppMap,
-                                                              SynthFuncTypes,
-                                                              TheLogger, ConcEvaluatorMode::PBE));
+            PBEEvalPtrs.push_back(make_unique<ConcreteEvaluator>(this,
+                                                 PBEConstraints[i],
+                                                 SynthFuncs.size(),
+                                                 PBEBaseAuxVarVecs[i],
+                                                 PBEDerivedAuxVarVecs[i],
+                                                 PBESynthFunAppMap,
+                                                 SynthFuncTypes,
+                                                 TheLogger,
+                                                 i));
+
             SMTConcreteValueModel Model;
-            TP->AddConcreteValueToModel(ConstRelevantVars[i].first, ConstRelevantVars[i].second, Model, this);
-            PBEEvals.back()->AddPoint(Model);
+            TP->AddConcreteValueToModel(ConstRelevantVars[i].first,
+                                        ConstRelevantVars[i].second,
+                                        Model,
+                                        this);
+            PBEEvalPtrs.back()->AddPBEPoint(Model);
+            if (i != 0) {
+                PBEEvalPtrs.front()->AddPBEDistPoint(Model[ConstRelevantVars[i].first]);
+            }
         }
+        // resetting the shared signature store
+        ConcreteEvaluator::ResetSigStore(1, 1);
     }
 
     void CEGSolver::EndSolve()

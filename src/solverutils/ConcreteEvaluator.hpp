@@ -73,6 +73,8 @@ namespace ESolver {
         vector<vector<const ConcreteValueBase*>> EvalPoints;
         // Buffers for evaluation of subexpressions
         vector<vector<const ConcreteValueBase*>> SubExpEvalPoints;
+        // Used to check subexpression distinguishability
+        vector<const ConcreteValueBase*> PBEDistPoints;
 
         vector<const AuxVarOperator*> BaseAuxVars;
         vector<const AuxVarOperator*> DerivedAuxVars;
@@ -86,14 +88,14 @@ namespace ESolver {
         const bool NoDist;
         Logger& TheLogger;
         uint32 NumPoints;
-        SigSetType SigSet;
+        uint32 TheId;
+        static SigSetType SigSet;
 
         // Pool for the signature objects
-        boost::pool<>* SigPool;
+        static boost::pool<>* SigPool;
 
         // The pool for signatures
         static boost::pool<>* SigVecPool;
-        ConcEvaluatorMode TheMode;
 
     public:
         ConcreteEvaluator(ESolver* Solver,
@@ -103,14 +105,20 @@ namespace ESolver {
                           const vector<const AuxVarOperator*>& DerivedAuxVars,
                           const vector<map<vector<uint32>, uint32>>& SynthFunAppMaps,
                           const vector<const ESFixedTypeBase*>& SynthFuncTypes,
-                          Logger& TheLogger, ConcEvaluatorMode Mode = ConcEvaluatorMode::Default);
+                          Logger& TheLogger, uint32 EvalId = 0);
 
 
         ~ConcreteEvaluator();
 
         void AddPoint(const SMTConcreteValueModel& Model);
 
-        static void PBEInitialize(uint FunArity, uint NumExamplePoints);
+        void AddPBEPoint(const SMTConcreteValueModel& Model);
+
+        void AddPBEDistPoint(const ConcreteValueBase* Value);
+
+        inline bool IsPBEDistinguishable(GenExpressionBase* Exp) const;
+
+        static void ResetSigStore(uint FunArity, uint NumPoints);
 
         static void Finalize();
 
@@ -119,9 +127,10 @@ namespace ESolver {
                                    ESFixedTypeBase const* const* Types,
                                    const uint32* ExpansionTypeIDs);
         // For single function synthesis
-        bool CheckConcreteValidity(GenExpressionBase const* Exp,
+        bool CheckConcreteValidity(const GenExpressionBase* Exp,
                                    const ESFixedTypeBase* Type,
-                                   uint32 EvalTypeID, uint32& Status);
+                                   uint32 EvalTypeID,
+                                   uint32& Status);
         bool CheckSubExpression(GenExpressionBase* Exp,
                                 const ESFixedTypeBase* Type,
                                 uint32 EvalTypeID, uint32& Status);

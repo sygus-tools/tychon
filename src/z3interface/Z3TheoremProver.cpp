@@ -827,19 +827,23 @@ namespace ESolver {
         auto VarOp = OperatorBase::As<VarOperatorBase>(CurOp);
         auto AuxVarOp = OperatorBase::As<AuxVarOperator>(CurOp);
 
-        if(VarOp == NULL && AuxVarOp == NULL) {
-            throw ModelGenException((string)"Error: Expected operator \"" + VarName + "\" to be a variable");
+        if (VarOp == NULL && AuxVarOp == NULL) {
+            throw ModelGenException(
+                (string) "Error: Expected operator \"" + VarName
+                    + "\" to be a variable");
         }
 
         const string& CurVarName = CurOp->GetName();
         const ESFixedTypeBase* Type = CurOp->GetEvalType();
 
-        switch(Type->GetBaseType()) {
+        switch (Type->GetBaseType()) {
             case BaseTypeBool:
-                if(ValueString == "true") {
-                    ConcModel[CurVarName] = Solver->CreateValue(Type, (int64)1);
+                if (ValueString == "true") {
+                    ConcModel[CurVarName] =
+                        Solver->CreateValue(Type, (int64) 1);
                 } else {
-                    ConcModel[CurVarName] = Solver->CreateValue(Type, (int64)0);
+                    ConcModel[CurVarName] =
+                        Solver->CreateValue(Type, (int64) 0);
                 }
                 break;
 
@@ -856,12 +860,14 @@ namespace ESolver {
                 NumBits = Type->As<ESBVType>()->GetSize();
                 Shift = 64 - NumBits;
                 ModelValue = (ModelValue << Shift) >> Shift;
-                ConcModel[CurVarName] = Solver->CreateValue(Type, *(int64 *)&ModelValue);
+                ConcModel[CurVarName] =
+                    Solver->CreateValue(Type, *(int64*) &ModelValue);
                 break;
 
             default:
-                throw InternalError((string)"Unhandled type in GetConcreteValue.\n" +
-                    "At: " + __FILE__ + ":" + to_string(__LINE__));
+                throw InternalError(
+                    (string) "Unhandled type in GetConcreteValue.\n" +
+                        "At: " + __FILE__ + ":" + to_string(__LINE__));
         }
     }
 
