@@ -185,7 +185,14 @@ namespace ESolver {
         }
 
         // ConcValid, check for symbolic validity
-        bool SymbValid = CheckSymbolicValidity(Exp);
+        bool SymbValid;
+        if (Mode == CEGSolverMode::PBE) {
+            // Symbolic validation is unnecessary in PBE
+            SymbValid = true;
+        } else {
+            SymbValid = CheckSymbolicValidity(Exp);
+        }
+
         if (SymbValid) {
             // We're done
             this->Complete = true;
@@ -195,11 +202,6 @@ namespace ESolver {
                                                    GenExpressionBase::ToUserExpression(Exp, this)));
             return STOP_ENUMERATION;
         } else {
-            if(Mode == CEGSolverMode::PBE) {
-                throw InternalError((string)"Internal Error: Symbolic validity should " +
-                    "always hold in Programming-by-Example mode" +
-                    "\nAt: " + __FILE__ + ":" + to_string(__LINE__));
-            }
             // Get the counter example and add it as a point
             SMTModel TheSMTModel;
             SMTConcreteValueModel ConcSMTModel;
