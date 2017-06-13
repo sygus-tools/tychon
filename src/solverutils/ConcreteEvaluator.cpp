@@ -109,7 +109,6 @@ namespace ESolver {
         // Add another row to SubExpEvalPoints
         SubExpEvalPoints.push_back(vector<const ConcreteValueBase*>((size_t)NumSynthFunApps,
                                                                     nullptr));
-        ResetSigStore(NumSynthFunApps, NumPoints + 1);
 
         for(uint32 i = 0; i < NumBaseAuxVars; ++i) {
             auto it = Model.find(BaseAuxVars[i]->GetName());
@@ -128,62 +127,6 @@ namespace ESolver {
             for (uint32 j = 0; j < SynthFunAppMaps[i].size(); ++j) {
                 EvalPoints[NumPoints][SynthFunAppMaps[i][j].second] =
                     SubExpEvalPoints[NumPoints][k] = new ConcreteValueBase();
-                ++k;
-            }
-        }
-
-        if (Solver->GetOpts().StatsLevel >= 3) {
-            TheLogger.Log3("Adding point: <");
-            for(uint32 i = 0; i < NumBaseAuxVars; ++i) {
-                TheLogger.Log2(Points.back()[i]->ToSimpleString());
-                if(i != NumBaseAuxVars - 1) {
-                    TheLogger.Log3(", ");
-                }
-            }
-            TheLogger.Log3(">\n");
-        }
-
-        // Check for duplicates
-        for(uint32 i = 0; i < NumPoints; ++i) {
-            if(memcmp(Points[NumPoints].data(), Points[i].data(),
-                      sizeof(ConcreteValueBase const*) * NumBaseAuxVars) == 0) {
-                throw InternalError((string)"Error: Tried to add a duplicate point to the " +
-                                    "Concrete Evaluator!\nAt: " + __FILE__ + ":" +
-                                    to_string(__LINE__));
-            }
-        }
-
-        ++NumPoints;
-    }
-
-    // Similar to AddPoint but doesn't reset signatures
-    void ConcreteEvaluator::AddPBEPoint(const SMTConcreteValueModel& Model)
-    {
-        // Add another point
-        Points.push_back(vector<const ConcreteValueBase*>((size_t)NumBaseAuxVars, nullptr));
-        // Add another row to EvalPoints
-        EvalPoints.push_back(vector<const ConcreteValueBase*>((size_t)NumTotalAuxVars, nullptr));
-        // Add another row to SubExpEvalPoints
-        SubExpEvalPoints.push_back(vector<const ConcreteValueBase*>((size_t)NumSynthFunApps,
-                                                                    nullptr));
-
-        for(uint32 i = 0; i < NumBaseAuxVars; ++i) {
-            auto it = Model.find(BaseAuxVars[i]->GetName());
-            if (it == Model.end()) {
-                throw InternalError((string)"Internal Error: Could not find model for " +
-                    "variable \"" + BaseAuxVars[i]->GetName() +
-                    "\".\nAt: " + __FILE__ + ":" + to_string(__LINE__));
-            }
-
-            EvalPoints[NumPoints][BaseAuxVars[i]->GetPosition()] = it->second;
-            Points[NumPoints][BaseAuxVars[i]->GetPosition()] = it->second;
-        }
-
-        uint32 k = 0;
-        for (uint32 i = 0; i < NumSynthFuncs; ++i) {
-            for (uint32 j = 0; j < SynthFunAppMaps[i].size(); ++j) {
-                EvalPoints[NumPoints][SynthFunAppMaps[i][j].second] =
-                SubExpEvalPoints[NumPoints][k] = new ConcreteValueBase();
                 ++k;
             }
         }
@@ -228,7 +171,7 @@ namespace ESolver {
         ++NumPoints;
     }
 
-    void ConcreteEvaluator::ResetSigStore(uint FunArity, uint NumPoints)
+    void ConcreteEvaluator::ResetSigStore(const ConcreteEvaluator* ConcEval)
     {
         // Recreate the pool for the new size
         if (SigVecPool != nullptr) {
@@ -238,7 +181,7 @@ namespace ESolver {
 
         SigVecPool =
             new boost::pool<>(sizeof(ConcreteValueBase const*) *
-                FunArity * (NumPoints));
+                ConcEval->NumSynthFunApps * (ConcEval->NumPoints));
 
 
         // Clear all the accumulated signatures
@@ -252,13 +195,13 @@ namespace ESolver {
 
     void ConcreteEvaluator::Finalize()
     {
-        if (ConcreteEvaluator::SigPool != nullptr) {
-            delete ConcreteEvaluator::SigPool;
-        }
-
         if (SigVecPool != nullptr) {
             delete SigVecPool;
             SigVecPool = nullptr;
+        }
+        if (SigPool != nullptr) {
+            delete SigPool;
+            SigPool = nullptr;
         }
     }
 

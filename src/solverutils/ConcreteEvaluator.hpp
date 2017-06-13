@@ -112,11 +112,9 @@ namespace ESolver {
 
         void AddPoint(const SMTConcreteValueModel& Model);
 
-        void AddPBEPoint(const SMTConcreteValueModel& Model);
-
         void AddPBEDistPoint(const ConcreteValueBase* Value);
 
-        static void ResetSigStore(uint FunArity, uint NumPoints);
+        static void ResetSigStore(const ConcreteEvaluator* ConcEval);
 
         static void Finalize();
 

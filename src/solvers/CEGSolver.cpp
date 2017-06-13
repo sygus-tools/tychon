@@ -211,6 +211,7 @@ namespace ESolver {
             SMTConcreteValueModel ConcSMTModel;
             TP->GetConcreteModel(RelevantVars, TheSMTModel, ConcSMTModel, this);
             ConcEval->AddPoint(ConcSMTModel);
+            ConcreteEvaluator::ResetSigStore(ConcEval);
 
             if (!Opts.NoDist) {
                 Restart = true;
@@ -343,6 +344,7 @@ namespace ESolver {
             SMTConcreteValueModel ConcSMTModel;
             TP->GetConcreteModel(RelevantVars, TheSMTModel, ConcSMTModel, this);
             ConcEval->AddPoint(ConcSMTModel);
+            ConcreteEvaluator::ResetSigStore(ConcEval);
             return NONE_STATUS;
         }
     }
@@ -528,13 +530,13 @@ namespace ESolver {
                                         ConstRelevantVars[i].second,
                                         Model,
                                         this);
-            PBEEvalPtrs.back()->AddPBEPoint(Model);
+            PBEEvalPtrs.back()->AddPoint(Model);
             if (i != 0) {
-                PBEEvalPtrs.front()->AddPBEDistPoint(Model[ConstRelevantVars[i].first]);
+                PBEEvalPtrs[0]->AddPBEDistPoint(Model[ConstRelevantVars[i].first]);
             }
         }
         // resetting the shared signature store
-        ConcreteEvaluator::ResetSigStore(1, PBEEvalPtrs.size());
+        ConcreteEvaluator::ResetSigStore(PBEEvalPtrs[0].get());
     }
 
     void CEGSolver::EndSolve()
