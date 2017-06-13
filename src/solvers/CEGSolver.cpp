@@ -66,7 +66,6 @@ namespace ESolver {
     CEGSolver::~CEGSolver()
     {
         if (ConcEval != nullptr) {
-            ConcEval->Finalize();
             delete ConcEval;
         }
         if (ExpEnumerator != nullptr) {
@@ -479,11 +478,7 @@ namespace ESolver {
             TheLogger.Log1("Peak Memory: ").Log1(Memory).Log1(" MB.\n");
         }
 
-        GenExpressionBase::Finalize();
-        delete ConcEval;
-        ConcEval = nullptr;
-        delete ExpEnumerator;
-        ExpEnumerator = nullptr;
+        EndSolve();
         return Solutions;
     }
 
@@ -542,6 +537,7 @@ namespace ESolver {
     void CEGSolver::EndSolve()
     {
         GenExpressionBase::Finalize();
+        ConcreteEvaluator::Finalize();
         delete ConcEval;
         ConcEval = nullptr;
         delete ExpEnumerator;

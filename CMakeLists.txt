@@ -115,7 +115,8 @@ set(tychon_source_files
   ${tychon_source_dir}/visitors/ExpressionVisitorBase.cpp
   ${tychon_source_dir}/expressions/ExprManager.cpp
   ${tychon_source_dir}/expressions/GenExpression.cpp
-  ${tychon_source_dir}/expressions/UserExpression.cpp src/visitors/PBEConsequentsInitializer.cpp src/visitors/PBEConsequentsInitializer.hpp)
+  ${tychon_source_dir}/expressions/UserExpression.cpp
+  ${tychon_source_dir}/visitors/PBEConsequentsInitializer.cpp)
 
 set(main_source_file
   ${tychon_source_dir}/main/ESolverSynthLib.cpp)

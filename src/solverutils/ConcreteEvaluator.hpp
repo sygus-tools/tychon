@@ -52,11 +52,6 @@
 
 namespace ESolver {
 
-    enum class ConcEvaluatorMode {
-        Default,
-        PBE
-    };
-
     /*
       This is a class for managing concrete examples
       and evaluating them
@@ -73,8 +68,6 @@ namespace ESolver {
         vector<vector<const ConcreteValueBase*>> EvalPoints;
         // Buffers for evaluation of subexpressions
         vector<vector<const ConcreteValueBase*>> SubExpEvalPoints;
-        // Used to check subexpression distinguishability
-        vector<const ConcreteValueBase*> PBEDistPoints;
 
         vector<const AuxVarOperator*> BaseAuxVars;
         vector<const AuxVarOperator*> DerivedAuxVars;

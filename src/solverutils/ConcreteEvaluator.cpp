@@ -199,6 +199,8 @@ namespace ESolver {
             delete SigVecPool;
             SigVecPool = nullptr;
         }
+
+        SigSet.clear();
         if (SigPool != nullptr) {
             delete SigPool;
             SigPool = nullptr;
