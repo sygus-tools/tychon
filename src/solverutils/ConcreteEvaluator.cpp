@@ -214,24 +214,18 @@ namespace ESolver {
 
     void ConcreteEvaluator::AddPBEDistPoint(const ConcreteValueBase* Value)
     {
-        PBEDistPoints.push_back(Value);
-    }
+        // Add another point
+        Points.push_back(vector<const ConcreteValueBase*>((size_t)NumBaseAuxVars,
+                                                          Value));
 
-    bool ConcreteEvaluator::IsPBEDistinguishable(GenExpressionBase* Exp) const
-    {
-        ConcreteValueBase Result(SubExpEvalPoints[0][0]->GetType(), 0);
-        for (auto DistPoint: PBEDistPoints) {
-            uint32 j = 0;
-            for (auto const& AppMapTargetPos : SynthFunAppMaps[0]) {
-                auto const& AppMap = AppMapTargetPos.first;
-                GenExpressionBase::Evaluate(Exp, &DistPoint, AppMap.data(), &Result);
-                if (Result.GetValue() != SubExpEvalPoints[0][j]->GetValue()) {
-                    return false;
-                }
-                ++j;
-            }
+        // Add another row to SubExpEvalPoints
+        SubExpEvalPoints.push_back(vector<const ConcreteValueBase*>((size_t)NumSynthFunApps,
+                                                                    nullptr));
+        for (uint32 i = 0; i < NumSynthFunApps; ++i) {
+            SubExpEvalPoints.back()[i] = new ConcreteValueBase();
         }
-        return true;
+
+        ++NumPoints;
     }
 
     void ConcreteEvaluator::ResetSigStore(uint FunArity, uint NumPoints)
@@ -258,16 +252,14 @@ namespace ESolver {
 
     void ConcreteEvaluator::Finalize()
     {
-        if (SigVecPool != nullptr) {
-            delete SigVecPool;
-            SigVecPool = nullptr;
-        }
-
         if (ConcreteEvaluator::SigPool != nullptr) {
             delete ConcreteEvaluator::SigPool;
         }
 
-        ConcreteEvaluator::SigSet.clear();
+        if (SigVecPool != nullptr) {
+            delete SigVecPool;
+            SigVecPool = nullptr;
+        }
     }
 
     bool ConcreteEvaluator::CheckSubExpressions(GenExpressionBase const* const* Exps,
@@ -358,11 +350,6 @@ namespace ESolver {
         if (SigSet.find(Sig) != SigSet.end()) {
             SigVecPool->free(Sig->ValVec);
             SigPool->free(Sig);
-
-            // check is effective in PBE mode only
-            if (PBEDistPoints.size() > 0 && !IsPBEDistinguishable(Exp)) {
-                return true;
-            }
             Status &= ~(CONCRETE_EVAL_DIST);
             return false;
         } else {
@@ -388,7 +375,7 @@ namespace ESolver {
         CheckSubExpressions(Exps, Types, ExpansionTypeIDs, Status);
 
         // Check the spec now that the derived aux vars are all created
-        for (uint32 i = 0; i < NumPoints; ++i) {
+        for (uint32 i = 0; i < EvalPoints.size(); ++i) {
             ConcreteValueBase Result;
             RewrittenSpec->Evaluate(Exps, EvalPoints[i].data(), &Result);
             if (ConcreteException) {
@@ -424,7 +411,7 @@ namespace ESolver {
         // Proceed now to evaluate the spec
         // The EvalPoints are already initialized
         // as a side effect of checking subexpression
-        for (uint32 i = 0; i < NumPoints; ++i) {
+        for (uint32 i = 0; i < EvalPoints.size(); ++i) {
             ConcreteValueBase Result;
             RewrittenSpec->Evaluate(Arr, EvalPoints[i].data(), &Result);
             if (ConcreteException) {

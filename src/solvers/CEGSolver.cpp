@@ -258,10 +258,6 @@ namespace ESolver {
         }
 
         NumDistExpressions++;
-        if (Opts.StatsLevel >= 4) {
-            TheLogger.Log4("Valid.").Log4("\n");
-        }
-
         for (uint32 i = 1; i < PBEEvalPtrs.size() && ConcValid; ++i) {
             ConcValid = PBEEvalPtrs[i]->CheckConcreteValidity(Exp,
                                                               Type,
@@ -273,15 +269,16 @@ namespace ESolver {
                     // bring interesting examples forward
                     iter_swap(PBEEvalPtrs.begin() + FirstDupValidEval,
                               PBEEvalPtrs.begin() + i);
-                    if (Opts.StatsLevel >= 4) {
+                    if (Opts.StatsLevel >= 6) {
                         TheLogger.Log4("Swapping ConcEval(").Log4(i).Log4(") ");
                         TheLogger.Log4("and ConcEval(").Log4(FirstDupValidEval).Log4(") \n");
                     }
                 }
-                if (Opts.StatsLevel >= 4) {
+                if (Opts.StatsLevel >= 6) {
                     TheLogger.Log4("ConcEval(").Log4(i).Log4("), ");
+                }
+                if (Opts.StatsLevel >= 4) {
                     TheLogger.Log4("Invalid, Dist.").Log4("\n");
-
                 }
                 return NONE_STATUS;
             }
@@ -291,10 +288,14 @@ namespace ESolver {
                 IsSetFirstDupValidEval = true;
             }
 
-            if (Opts.StatsLevel >= 4) {
+            if (Opts.StatsLevel >= 6) {
                 TheLogger.Log4("ConcEval(").Log4(i).Log4("), ");
                 TheLogger.Log4("Duplicate valid.").Log4("\n");
             }
+        }
+
+        if (Opts.StatsLevel >= 4) {
+            TheLogger.Log4("Valid.").Log4("\n");
         }
 
         this->Complete = true;
@@ -533,7 +534,7 @@ namespace ESolver {
             }
         }
         // resetting the shared signature store
-        ConcreteEvaluator::ResetSigStore(1, 1);
+        ConcreteEvaluator::ResetSigStore(1, PBEEvalPtrs.size());
     }
 
     void CEGSolver::EndSolve()

@@ -116,8 +116,6 @@ namespace ESolver {
 
         void AddPBEDistPoint(const ConcreteValueBase* Value);
 
-        inline bool IsPBEDistinguishable(GenExpressionBase* Exp) const;
-
         static void ResetSigStore(uint FunArity, uint NumPoints);
 
         static void Finalize();
