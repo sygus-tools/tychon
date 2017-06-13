@@ -26,6 +26,7 @@ namespace ESolver {
     {
     private:
         vector<Expression>& PBEConsequents;
+        unordered_map<string, bool> UniqueAuxVars;
         bool ReachedLeafNode;
 
     public:

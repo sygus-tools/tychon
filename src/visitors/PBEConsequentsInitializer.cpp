@@ -36,7 +36,11 @@ namespace ESolver {
         auto SubExprType1 = Exp->As<UserAuxVarExpression>(Children[0]);
         auto SubExprType2 = Exp->As<UserConstExpression>(Children[1]);
         if (SubExprType1 != nullptr && SubExprType2 != nullptr) {
-            PBEConsequents.push_back(Exp);
+            auto result = UniqueAuxVars.insert({Exp->ToString(), true});
+            // keep only unique constraints
+            if (result.second) {
+                PBEConsequents.push_back(Exp);
+            }
         } else {
             Children[0]->Accept(this);
             Children[1]->Accept(this);
