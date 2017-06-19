@@ -62,26 +62,31 @@ namespace ESolver {
     private:
         ESolver* Solver;
         Expression RewrittenSpec;
-        // Points consist only of base aux vars
-        vector<vector<const ConcreteValueBase*>> Points;
         // Buffers for evaluation, also contain space for derived aux vars
         vector<vector<const ConcreteValueBase*>> EvalPoints;
-        // Buffers for evaluation of subexpressions
-        vector<vector<const ConcreteValueBase*>> SubExpEvalPoints;
 
         vector<const AuxVarOperator*> BaseAuxVars;
         vector<const AuxVarOperator*> DerivedAuxVars;
         vector<vector<pair<vector<uint32>, uint32> > > SynthFunAppMaps;
         vector<const ESFixedTypeBase*> SynthFuncTypes;
-        uint32 NumSynthFunApps;
         const uint32 NumBaseAuxVars;
         const uint32 NumDerivedAuxVars;
         const uint32 NumTotalAuxVars;
         const uint32 NumSynthFuncs;
         const bool NoDist;
         Logger& TheLogger;
-        uint32 NumPoints;
         uint32 TheId;
+
+        static uint32 SigStoreMasterEvalId;
+        static uint32 NumSynthFunApps;
+
+        static uint32 NumPoints;
+        // Points consist only of base aux vars
+        static vector<vector<const ConcreteValueBase*>> Points;
+
+        // Buffers for evaluation of subexpressions
+        static vector<vector<const ConcreteValueBase*>> SubExpEvalPoints;
+
         static SigSetType SigSet;
 
         // Pool for the signature objects
@@ -105,9 +110,9 @@ namespace ESolver {
 
         void AddPoint(const SMTConcreteValueModel& Model);
 
-        void AddPBEDistPoint(const ConcreteValueBase* Value);
+        void AddPBEPoint(const SMTConcreteValueModel& Model);
 
-        static void ResetSigStore(const ConcreteEvaluator* ConcEval);
+        static void ResetSigStore(uint32 MasterEvalId = 0);
 
         static void Finalize();
 
@@ -130,6 +135,7 @@ namespace ESolver {
                                  uint32& Status);
 
         uint32 GetSize() const;
+        uint32 GetId() const;
     };
 
 } /* End namespace */

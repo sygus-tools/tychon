@@ -58,7 +58,9 @@
 namespace ESolver {
 
     CEGSolver::CEGSolver(const ESolverOpts* Opts)
-        : ESolver(Opts), ConcEval(nullptr), ExpEnumerator(nullptr), TheMode(CEGSolverMode::CEG)
+            : ESolver(Opts), ConcEval(nullptr), ExpEnumerator(nullptr),
+              TheMode(CEGSolverMode::CEG),
+              ThePhase(PBEPhase::EnumerateTermExprs)
     {
         // Nothing here
     }
@@ -76,7 +78,8 @@ namespace ESolver {
     inline bool CEGSolver::CheckSymbolicValidity(GenExpressionBase const* const* Exps)
     {
         vector<SMTExpr> Assumptions;
-        auto FinConstraint = RewrittenConstraint->ToSMT(TP, Exps, BaseExprs, Assumptions);
+        auto FinConstraint =
+                RewrittenConstraint->ToSMT(TP, Exps, BaseExprs, Assumptions);
         auto Antecedent = TP->CreateAndExpr(Assumptions);
         FinConstraint = TP->CreateImpliesExpr(Antecedent, FinConstraint);
 
@@ -87,23 +90,25 @@ namespace ESolver {
         auto TPRes = TP->CheckValidity(FinConstraint);
 
         switch (TPRes) {
-        case SOLVE_VALID:
-            return true;
-        case SOLVE_INVALID:
-        {
-            if (Opts.StatsLevel >= 4) {
-                TheLogger.Log4("Validity failed\nModel:\n");
-                SMTModel Model;
-                TP->GetConcreteModel(RelevantVars, Model, this);
-                for (auto ValuePair : Model) {
-                    TheLogger.Log4(ValuePair.first).Log4(" : ").Log4(ValuePair.second.ToString()).Log4("\n");
+            case SOLVE_VALID:
+                return true;
+            case SOLVE_INVALID: {
+                if (Opts.StatsLevel >= 4) {
+                    TheLogger.Log4("Validity failed\nModel:\n");
+                    SMTModel Model;
+                    TP->GetConcreteModel(RelevantVars, Model, this);
+                    for (auto ValuePair : Model) {
+                        TheLogger.Log4(ValuePair.first).Log4(" : ").Log4(
+                                ValuePair.second.ToString()).Log4(
+                                "\n");
+                    }
                 }
+                return false;
             }
-            return false;
-        }
-        default:
-            throw Z3Exception((string)"Error: Z3 returned an UNKNOWN result.\n" +
-                              "Make sure all theories are decidable.");
+            default:
+                throw Z3Exception(
+                        (string) "Error: Z3 returned an UNKNOWN result.\n" +
+                                "Make sure all theories are decidable.");
         }
     }
 
@@ -114,21 +119,23 @@ namespace ESolver {
         return CheckSymbolicValidity(Arr);
     }
 
-    CallbackStatus CEGSolver::SubExpressionCallBack(const GenExpressionBase *Exp,
-                                                    const ESFixedTypeBase *Type,
+    CallbackStatus CEGSolver::SubExpressionCallBack(const GenExpressionBase* Exp,
+                                                    const ESFixedTypeBase* Type,
                                                     uint32 ExpansionTypeID)
     {
         // Check if the subexpression is distinguishable
         uint32 StatusRet = 0;
 
         if (Opts.StatsLevel >= 4) {
-            TheLogger.Log4("Checking Subexpression ").Log4(Exp->ToString()).Log4("... ");
+            TheLogger.Log4("Checking Subexpression ").Log4(Exp->ToString()).Log4(
+                    "... ");
         }
 
         CheckResourceLimits();
 
-        auto Distinguishable = ConcEval->CheckSubExpression(const_cast<GenExpressionBase*>(Exp),
-                                                            Type, ExpansionTypeID, StatusRet);
+        auto Distinguishable =
+                ConcEval->CheckSubExpression(const_cast<GenExpressionBase*>(Exp),
+                                             Type, ExpansionTypeID, StatusRet);
         if (Distinguishable) {
             ++NumDistExpressions;
             if (Opts.StatsLevel >= 4) {
@@ -155,7 +162,10 @@ namespace ESolver {
     {
 
         if (TheMode == CEGSolverMode::PBE) {
-            return ExpressionCallBackPBE(Exp, Type, ExpansionTypeID, EnumeratorIndex);
+            return ExpressionCallBackPBE(Exp,
+                                         Type,
+                                         ExpansionTypeID,
+                                         EnumeratorIndex);
         }
 
         uint32 StatusRet = 0;
@@ -198,10 +208,13 @@ namespace ESolver {
         if (SymbValid) {
             // We're done
             this->Complete = true;
-            Solutions.push_back(vector<pair<const SynthFuncOperator*, Expression>>());
+            Solutions.push_back(vector<pair<const SynthFuncOperator*,
+                                            Expression>>());
             Solutions.back().push_back(pair<const SynthFuncOperator*,
-                                       Expression>(SynthFuncs[0],
-                                                   GenExpressionBase::ToUserExpression(Exp, this)));
+                                            Expression>(SynthFuncs[0],
+                                                        GenExpressionBase::ToUserExpression(
+                                                                Exp,
+                                                                this)));
             return STOP_ENUMERATION;
         } else {
 
@@ -210,7 +223,7 @@ namespace ESolver {
             SMTConcreteValueModel ConcSMTModel;
             TP->GetConcreteModel(RelevantVars, TheSMTModel, ConcSMTModel, this);
             ConcEval->AddPoint(ConcSMTModel);
-            ConcreteEvaluator::ResetSigStore(ConcEval);
+            ConcreteEvaluator::ResetSigStore(0);
 
             if (!Opts.NoDist) {
                 Restart = true;
@@ -226,12 +239,22 @@ namespace ESolver {
                                                     uint32 ExpansionTypeID,
                                                     uint32 EnumeratorIndex)
     {
+        if (ThePhase == PBEPhase::EnumerateTermExprs) {
+            return PBEEnumerateTermExprs(Exp,
+                                         Type,
+                                         ExpansionTypeID,
+                                         EnumeratorIndex);
+        }
+
         CheckResourceLimits();
         NumExpressionsTried++;
         if (Opts.StatsLevel >= 4) {
             TheLogger.Log4(Exp->ToString()).Log4("... ");
         }
 
+        // if phase terminal expression synthesis
+        // - check if we have a consistent expression
+        // - if not continue until we find a non-consistent expr where we reorganize and restart
         uint32 StatusRet = 0;
         uint32 FirstDupValidEval = 0;
         bool IsSetFirstDupValidEval = false;
@@ -240,7 +263,7 @@ namespace ESolver {
                                                                ExpansionTypeID,
                                                                StatusRet);
         if (!ConcValid) {
-            if((StatusRet & CONCRETE_EVAL_DIST) == 0){
+            if ((StatusRet & CONCRETE_EVAL_DIST) == 0) {
                 if (Opts.StatsLevel >= 4) {
                     TheLogger.Log4("Invalid, Indist.").Log4("\n");
                 }
@@ -271,7 +294,8 @@ namespace ESolver {
                               PBEEvalPtrs.begin() + i);
                     if (Opts.StatsLevel >= 6) {
                         TheLogger.Log4("Swapping ConcEval(").Log4(i).Log4(") ");
-                        TheLogger.Log4("and ConcEval(").Log4(FirstDupValidEval).Log4(") \n");
+                        TheLogger.Log4("and ConcEval(").Log4(FirstDupValidEval).Log4(
+                                ") \n");
                     }
                 }
                 if (Opts.StatsLevel >= 6) {
@@ -300,10 +324,98 @@ namespace ESolver {
 
         this->Complete = true;
         Solutions.push_back(vector<pair<const SynthFuncOperator*, Expression>>());
-        Solutions.back().push_back(pair<const SynthFuncOperator*,
-                                        Expression>(SynthFuncs[0],
-                                                    GenExpressionBase::ToUserExpression(Exp, this)));
+        Solutions.back().push_back({SynthFuncs[0],GenExpressionBase::ToUserExpression(Exp, this)});
 
+        return STOP_ENUMERATION;
+    }
+
+    CallbackStatus CEGSolver::PBEEnumerateTermExprs(const GenExpressionBase* Exp,
+                                                    const ESFixedTypeBase* Type,
+                                                    uint32 ExpansionTypeID,
+                                                    uint32 EnumeratorIndex)
+    {
+        CheckResourceLimits();
+        NumExpressionsTried++;
+        // find a unique evaluator still not mapped to a terminal expression
+        const uint32 CurrentEvalIdx = PBEUniqueEvalPtrs.back()->GetId();
+
+        if (Opts.StatsLevel >= 4) {
+            TheLogger.Log4(Exp->ToString()).Log4("... ");
+            TheLogger.Log4("Eval[").Log4(PBEEvalPtrs[CurrentEvalIdx]->GetId()).Log4(
+                    "], ");
+        }
+
+        uint32 StatusRet = 0;
+        bool ConcValid = PBEEvalPtrs[CurrentEvalIdx]->CheckConcreteValidity(Exp,
+                                                                            Type,
+                                                                            ExpansionTypeID,
+                                                                            StatusRet);
+        if (!ConcValid) {
+            if ((StatusRet & CONCRETE_EVAL_DIST) == 0) {
+                if (Opts.StatsLevel >= 4) {
+                    TheLogger.Log4("Invalid, Indist.").Log4("\n");
+                }
+                return DELETE_EXPRESSION;
+            }
+            if (Opts.StatsLevel >= 4) {
+                if ((StatusRet & CONCRETE_EVAL_PART) != 0) {
+                    TheLogger.Log4("Invalid, Dist (Partial).").Log4("\n");
+                } else {
+                    TheLogger.Log4("Invalid, Dist.").Log4("\n");
+                }
+            }
+            NumDistExpressions++;
+            return NONE_STATUS;
+        }
+        if (Opts.StatsLevel >= 4) {
+            TheLogger.Log4("Valid.").Log4("\n");
+        }
+
+        // Valid expr was found for this example, keep it
+        const uint32 TermExprIdx = PBETermExprs.size();
+        PBEEvalTermExprMap[PBEEvalPtrs[CurrentEvalIdx]->GetId()] = TermExprIdx;
+        PBETermExprs.push_back(GenExpressionBase::ToUserExpression(Exp, this));
+        NumDistExpressions++;
+
+        bool IsSetFirstInvalidEval = false;
+        bool IsConcValidUsingPrevExpr = false;
+        for (uint32 i = CurrentEvalIdx + 1; i < PBEEvalPtrs.size(); ++i) {
+            const auto result = PBEEvalTermExprMap.find(PBEEvalPtrs[i]->GetId());
+
+            if (result != PBEEvalTermExprMap.cend()) {
+                continue;
+            }
+            IsConcValidUsingPrevExpr =
+                    PBEEvalPtrs[i]->CheckConcreteValidity(Exp,
+                                                          Type,
+                                                          ExpansionTypeID,
+                                                          StatusRet);
+
+            if (IsConcValidUsingPrevExpr) {
+                PBEEvalTermExprMap[PBEEvalPtrs[i]->GetId()] = TermExprIdx;
+                if (Opts.StatsLevel >= 4) {
+                    TheLogger.Log4("Eval[").Log4(i).Log4("], ");
+                    TheLogger.Log4("Duplicate valid.").Log4("\n");
+                }
+            } else {
+                if (!IsSetFirstInvalidEval) {
+                    PBEUniqueEvalPtrs.push_back(PBEEvalPtrs[i].get());
+                    IsSetFirstInvalidEval = true;
+                }
+                if (Opts.StatsLevel >= 4) {
+                    TheLogger.Log4("Eval[").Log4(i).Log4("], ");
+                    TheLogger.Log4("Invalid.").Log4("\n");
+                }
+            }
+        }
+
+        // check if a valid terminal expr was found for all examples
+        if (PBEEvalTermExprMap.size() == PBEEvalPtrs.size()) {
+            ThePhase = PBEPhase::EnumerateConditions;
+        } else {
+            ConcreteEvaluator::ResetSigStore(PBEUniqueEvalPtrs.back()->GetId());
+        }
+        Restart = true;
         return STOP_ENUMERATION;
     }
 
@@ -319,23 +431,29 @@ namespace ESolver {
         if (Opts.StatsLevel >= 4) {
             TheLogger.Log4("Trying Expressions:\n");
             for (uint32 i = 0; i < SynthFuncs.size(); ++i) {
-                TheLogger.Log4(i).Log4((string)". " + Exps[i]->ToString()).Log4("\n");
+                TheLogger.Log4(i).Log4(
+                        (string) ". " + Exps[i]->ToString()).Log4(
+                        "\n");
             }
             TheLogger.Log4("\n");
         }
 
-        auto ConcValid = ConcEval->CheckConcreteValidity(Exps, Types, ExpansionTypeIDs);
+        auto ConcValid =
+                ConcEval->CheckConcreteValidity(Exps, Types, ExpansionTypeIDs);
         if (!ConcValid) {
             return NONE_STATUS;
         }
         bool SymbValid = CheckSymbolicValidity(Exps);
         if (SymbValid) {
             this->Complete = true;
-            Solutions.push_back(vector<pair<const SynthFuncOperator*, Expression>>());
+            Solutions.push_back(vector<pair<const SynthFuncOperator*,
+                                            Expression>>());
             for (uint32 i = 0; i < SynthFuncs.size(); ++i) {
                 Solutions.back().push_back(pair<const SynthFuncOperator*,
-                                           Expression>(SynthFuncs[i],
-                                                       GenExpressionBase::ToUserExpression(Exps[i], this)));
+                                                Expression>(SynthFuncs[i],
+                                                            GenExpressionBase::ToUserExpression(
+                                                                    Exps[i],
+                                                                    this)));
             }
             return STOP_ENUMERATION;
         } else {
@@ -343,20 +461,21 @@ namespace ESolver {
             SMTConcreteValueModel ConcSMTModel;
             TP->GetConcreteModel(RelevantVars, TheSMTModel, ConcSMTModel, this);
             ConcEval->AddPoint(ConcSMTModel);
-            ConcreteEvaluator::ResetSigStore(ConcEval);
+            ConcreteEvaluator::ResetSigStore(0);
             return NONE_STATUS;
         }
     }
 
     SolutionMap CEGSolver::Solve(const Expression& Constraint)
     {
-        NumExpressionsTried = NumDistExpressions = (uint64)0;
+        NumExpressionsTried = NumDistExpressions = (uint64) 0;
         Solutions.clear();
         // Announce that we're at the beginning of a solve
         Complete = false;
         // Gather all the synth funcs
         auto&& SFSet = SynthFuncGatherer::Do(Constraint);
-        SynthFuncs = vector<const SynthFuncOperator*>(SFSet.begin(), SFSet.end());
+        SynthFuncs =
+                vector<const SynthFuncOperator*>(SFSet.begin(), SFSet.end());
         // Check the spec
         LetBindingChecker::Do(Constraint);
         // Rewrite the spec
@@ -380,7 +499,8 @@ namespace ESolver {
         for (auto const& Op : BaseAuxVars) {
             // Set up SMT expressions for  aux vars
             BaseExprs[Op->GetPosition()] =
-                TP->CreateVarExpr(Op->GetName(), Op->GetEvalType()->GetSMTType());
+                    TP->CreateVarExpr(Op->GetName(),
+                                      Op->GetEvalType()->GetSMTType());
             // Set up the relevant variables as the aux vars
             // which are essentially universally quantified
             // as well as any aux vars which are used as an
@@ -390,7 +510,8 @@ namespace ESolver {
 
         for (auto const& Op : DerivedAuxVars) {
             BaseExprs[Op->GetPosition()] =
-                TP->CreateVarExpr(Op->GetName(), Op->GetEvalType()->GetSMTType());
+                    TP->CreateVarExpr(Op->GetName(),
+                                      Op->GetEvalType()->GetSMTType());
         }
 
         // Assign IDs and delayed bindings to SynthFuncs
@@ -421,13 +542,15 @@ namespace ESolver {
 
         // Check PBE mode and, if so, switch mode and do initialization
         if (ConstRelevantVars.size() == RelevantVars.size() &&
-            ConstRelevantVars.size() == PBEAntecedentExprs.size()) {
+                ConstRelevantVars.size() == PBEAntecedentExprs.size()) {
             TheMode = CEGSolverMode::PBE;
             if (Opts.StatsLevel > 2) {
-                TheLogger.Log1("\n").Log1("Programming-by-example constraints detected").Log1("\n");
+                TheLogger.Log1("\n").Log1(
+                        "Programming-by-example constraints detected").Log1("\n");
             }
 
-            PBEConsequentsInitializer::Do(RewrittenConstraint, PBEConsequentExprs);
+            PBEConsequentsInitializer::Do(RewrittenConstraint,
+                                          PBEConsequentExprs);
             auto MapIt = SynthFunAppMaps.back().cbegin();
             PBESynthFunAppMap.push_back({{MapIt->first, MapIt->first.size()}});
             PBEInitializeEvals(ConstRelevantVars,
@@ -438,9 +561,15 @@ namespace ESolver {
                                SynthFuncTypes);
         } else {
             // Create the concrete evaluator
-            ConcEval = new ConcreteEvaluator(this, RewrittenConstraint, SynthFuncs.size(),
-                                             BaseAuxVars, DerivedAuxVars, SynthFunAppMaps,
-                                             SynthFuncTypes, TheLogger);
+            ConcEval =
+                    new ConcreteEvaluator(this,
+                                          RewrittenConstraint,
+                                          SynthFuncs.size(),
+                                          BaseAuxVars,
+                                          DerivedAuxVars,
+                                          SynthFunAppMaps,
+                                          SynthFuncTypes,
+                                          TheLogger);
         }
 
         // Set up evaluation buffers/stacks for generated expressions
@@ -450,9 +579,11 @@ namespace ESolver {
         PreSolve();
         do {
             Restart = false;
-            for (uint32 i = NumSynthFuncs; i <= Opts.CostBudget && !Complete; ++i) {
+            for (uint32 i = NumSynthFuncs; i <= Opts.CostBudget && !Complete;
+                 ++i) {
                 if (Opts.StatsLevel >= 2) {
-                    TheLogger.Log1("Trying expressions of size ").Log1(i).Log1("\n");
+                    TheLogger.Log1("Trying expressions of size ").Log1(i).Log1(
+                            "\n");
                 }
                 ExpEnumerator->EnumerateOfCost(i);
                 if (Restart) {
@@ -461,15 +592,17 @@ namespace ESolver {
                     break;
                 }
             }
-            if (Restart && Opts.StatsLevel >= 2){
-                TheLogger.Log1("Restarting enumeration... (").Log1(NumRestarts).Log1(")\n");
+            if (Restart && Opts.StatsLevel >= 2) {
+                TheLogger.Log1("Restarting enumeration... (").Log1(NumRestarts).Log1(
+                        ")\n");
             }
         } while (Restart && !Complete);
         // We're done
         PostSolve();
 
         if (Opts.StatsLevel >= 1) {
-            TheLogger.Log1("Tried ").Log1(NumExpressionsTried).Log1(" expressions in all.\n");
+            TheLogger.Log1("Tried ").Log1(NumExpressionsTried).Log1(
+                    " expressions in all.\n");
             TheLogger.Log1(NumDistExpressions).Log1(" were distinguishable.\n");
             TheLogger.Log1("Needed ").Log1(NumRestarts).Log1(" Restarts.\n");
             double Time, Memory;
@@ -483,26 +616,28 @@ namespace ESolver {
     }
 
     void CEGSolver::PBEInitializeEvals(vector<pair<string, string>>& ConstRelevantVars,
-                                   vector<Expression>& PBEConstraints,
-                                   vector<vector<const AuxVarOperator*>>& PBEBaseAuxVarVecs,
-                                   vector<vector<const AuxVarOperator*>>& PBEDerivedAuxVarVecs,
-                                   vector<map<vector<uint32>, uint32>>& PBESynthFunAppMap,
-                                   vector<const ESFixedTypeBase*>& SynthFuncTypes)
+                                       vector<Expression>& PBEConstraints,
+                                       vector<vector<const AuxVarOperator*>>& PBEBaseAuxVarVecs,
+                                       vector<vector<const AuxVarOperator*>>& PBEDerivedAuxVarVecs,
+                                       vector<map<vector<uint32>, uint32>>& PBESynthFunAppMap,
+                                       vector<const ESFixedTypeBase*>& SynthFuncTypes)
     {
         PBEConstraints.reserve(PBEAntecedentExprs.size());
         PBEBaseAuxVarVecs.resize(PBEAntecedentExprs.size());
         PBEDerivedAuxVarVecs.resize(PBEAntecedentExprs.size());
 
         assert(SynthFunAppMaps.size() == 1
-                   && SynthFunAppMaps.back().size() == PBEAntecedentExprs.size()
-                   && "PBE does not support synthesis of multiple functions");
+                       && SynthFunAppMaps.back().size() == PBEAntecedentExprs.size()
+                       && "PBE does not support synthesis of multiple functions");
 
         // TODO: generalize this to functions with arity > 1
         auto AppMapIt = PBESynthFunAppMap.back().cbegin();
         PBEParamMapFixup Fixer(AppMapIt->first);
         for (uint i = 0; i < ConstRelevantVars.size(); ++i) {
             PBEAntecedentExprs[i]->Accept(&Fixer);
-            PBEConstraints.push_back(CreateExpression("=>", PBEAntecedentExprs[i], PBEConsequentExprs[i]));
+            PBEConstraints.push_back(CreateExpression("=>",
+                                                      PBEAntecedentExprs[i],
+                                                      PBEConsequentExprs[i]));
             BaseAuxVars[i]->SetPosition(0);
             PBEBaseAuxVarVecs[i].push_back(BaseAuxVars[i]);
             DerivedAuxVars[i]->SetPosition(AppMapIt->second);
@@ -511,27 +646,25 @@ namespace ESolver {
 
         for (uint i = 0; i < ConstRelevantVars.size(); ++i) {
             PBEEvalPtrs.push_back(make_unique<ConcreteEvaluator>(this,
-                                                 PBEConstraints[i],
-                                                 SynthFuncs.size(),
-                                                 PBEBaseAuxVarVecs[i],
-                                                 PBEDerivedAuxVarVecs[i],
-                                                 PBESynthFunAppMap,
-                                                 SynthFuncTypes,
-                                                 TheLogger,
-                                                 i));
+                                                                 PBEConstraints[i],
+                                                                 SynthFuncs.size(),
+                                                                 PBEBaseAuxVarVecs[i],
+                                                                 PBEDerivedAuxVarVecs[i],
+                                                                 PBESynthFunAppMap,
+                                                                 SynthFuncTypes,
+                                                                 TheLogger,
+                                                                 i));
 
             SMTConcreteValueModel Model;
             TP->AddConcreteValueToModel(ConstRelevantVars[i].first,
                                         ConstRelevantVars[i].second,
                                         Model,
                                         this);
-            PBEEvalPtrs.back()->AddPoint(Model);
-            if (i != 0) {
-                PBEEvalPtrs[0]->AddPBEDistPoint(Model[ConstRelevantVars[i].first]);
-            }
+            PBEEvalPtrs.back()->AddPBEPoint(Model);
         }
-        // resetting the shared signature store
-        ConcreteEvaluator::ResetSigStore(PBEEvalPtrs[0].get());
+        // initialization for first evaluator
+        PBEUniqueEvalPtrs.push_back(PBEEvalPtrs.front().get());
+        ConcreteEvaluator::ResetSigStore(0);
     }
 
     void CEGSolver::EndSolve()

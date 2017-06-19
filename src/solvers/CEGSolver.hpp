@@ -74,14 +74,22 @@ namespace ESolver {
         bool Complete;
         SolutionMap Solutions;
         bool Restart;
-
         uint64 NumExpressionsTried;
         uint64 NumDistExpressions;
         CEGSolverMode TheMode;
 
+        enum class PBEPhase {
+            EnumerateTermExprs,
+            EnumerateConditions
+        };
+
+        PBEPhase ThePhase;
         vector<Expression> PBEAntecedentExprs;
         vector<Expression> PBEConsequentExprs;
+        vector<ConcreteEvaluator*> PBEUniqueEvalPtrs;
         vector<unique_ptr<ConcreteEvaluator>> PBEEvalPtrs;
+        vector<Expression> PBETermExprs;
+        unordered_map<uint32, uint32> PBEEvalTermExprMap;
 
         // Single function case
         inline bool CheckSymbolicValidity(const GenExpressionBase* Exp);
@@ -94,6 +102,11 @@ namespace ESolver {
                                 vector<vector<const AuxVarOperator*>>& PBEDerivedAuxVarVecs,
                                 vector<map<vector<uint32>,uint32>>& PBESynthFunAppMap,
                                 vector<const ESFixedTypeBase*>& SynthFuncTypes);
+
+        virtual CallbackStatus PBEEnumerateTermExprs(const GenExpressionBase* Exp,
+                                                     const ESFixedTypeBase* Type,
+                                                     uint32 ExpansionTypeID,
+                                                     uint32 EnumeratorIndex = 0);
 
     public:
         CEGSolver(const ESolverOpts* Opts);
