@@ -134,6 +134,13 @@ namespace ESolver {
                                  uint32 const* EvalTypeIDs,
                                  uint32& Status);
 
+        static inline const ConcreteValueBase* GetSubExprEvalPoint(uint32 PointIdx)
+        {
+            return SubExpEvalPoints[PointIdx][0];
+        }
+
+        void ConretelyEvaluate(const GenExpressionBase* Expr, ConcreteValueBase* Result) const;
+
         uint32 GetSize() const;
         uint32 GetId() const;
     };

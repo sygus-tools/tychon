@@ -78,18 +78,28 @@ namespace ESolver {
         uint64 NumDistExpressions;
         CEGSolverMode TheMode;
 
-        enum class PBEPhase {
-            EnumerateTermExprs,
-            EnumerateConditions
+        // Enumeration phases in PBE
+        enum class PBEEnumPhase {
+            TermExprs,
+            UniqueEvalConditions,
+            RestEvalConditions
         };
 
-        PBEPhase ThePhase;
+        PBEEnumPhase PBEPhase;
         vector<Expression> PBEAntecedentExprs;
         vector<Expression> PBEConsequentExprs;
         vector<ConcreteEvaluator*> PBEUniqueEvalPtrs;
         vector<unique_ptr<ConcreteEvaluator>> PBEEvalPtrs;
+        Expression PBEConditionTreeExpr;
+        const InterpretedFuncOperator* PBEConditionExprOp;
+        const string PBEConditionOpName = "IFTE";
+        ConcreteEvaluator* PBECurrentEvalPtrs[2];
+
+        // A terminal expression is an expression that was found consistent
+        // at least with one example.
         vector<Expression> PBETermExprs;
-        unordered_map<uint32, uint32> PBEEvalTermExprMap;
+        // maps an evaluator(example) to its terminal expression
+        unordered_map<uint32, std::pair<uint32, bool>> PBEEvalTermExprMap;
 
         // Single function case
         inline bool CheckSymbolicValidity(const GenExpressionBase* Exp);
@@ -103,10 +113,13 @@ namespace ESolver {
                                 vector<map<vector<uint32>,uint32>>& PBESynthFunAppMap,
                                 vector<const ESFixedTypeBase*>& SynthFuncTypes);
 
-        virtual CallbackStatus PBEEnumerateTermExprs(const GenExpressionBase* Exp,
-                                                     const ESFixedTypeBase* Type,
-                                                     uint32 ExpansionTypeID,
-                                                     uint32 EnumeratorIndex = 0);
+        virtual CallbackStatus PBEEnumTermExprs(const GenExpressionBase* Exp,
+                                                const ESFixedTypeBase* Type,
+                                                uint32 ExpansionTypeID);
+
+        virtual CallbackStatus PBEEnumConditionTree(const GenExpressionBase* Exp,
+                                                    const ESFixedTypeBase* Type,
+                                                    uint32 ExpansionTypeID);
 
     public:
         CEGSolver(const ESolverOpts* Opts);
@@ -121,10 +134,6 @@ namespace ESolver {
                                                   uint32 ExpansionTypeID,
                                                   uint32 EnumeratorIndex = 0) override;
 
-        virtual CallbackStatus ExpressionCallBackPBE(const GenExpressionBase* Exp,
-                                                     const ESFixedTypeBase* Type,
-                                                     uint32 ExpansionTypeID,
-                                                     uint32 EnumeratorIndex = 0);
         // For multifunction synthesis
         virtual CallbackStatus ExpressionCallBack(GenExpressionBase const* const* Exp,
                                                   ESFixedTypeBase const* const* Type,

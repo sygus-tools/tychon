@@ -55,6 +55,8 @@ namespace ESolver {
     // Flag indicating that an expression is partial
     // and could not be evaluated
     bool PartialExpression = false;
+
+    // vars related to signatures are shared among evaluators
     uint32 ConcreteEvaluator::SigStoreMasterEvalId = 0;
     uint32 ConcreteEvaluator::NumSynthFunApps = 0;
     uint32 ConcreteEvaluator::NumPoints = 0;
@@ -406,6 +408,15 @@ namespace ESolver {
             }
         }
         return true;
+    }
+
+    void ConcreteEvaluator::ConretelyEvaluate(const GenExpressionBase* Expr,
+                                              ConcreteValueBase* Result) const
+    {
+        GenExpressionBase::Evaluate(Expr,
+                                    EvalPoints[0].data(),
+                                    SynthFunAppMaps[0][0].first.data(),
+                                    Result);
     }
 
     uint32 ConcreteEvaluator::GetSize() const
