@@ -394,6 +394,11 @@ namespace ESolver {
         return Children;
     }
 
+    void UserInterpretedFuncExpression::SetChildAt(uint32 Idx, Expression Exp)
+    {
+        Children[Idx] = Exp;
+    }
+
     void UserInterpretedFuncExpression::Evaluate(ExpSubstMap SubstExps,
                                                  VariableMap VarMap,
                                                  ConcreteValueBase* Result) const

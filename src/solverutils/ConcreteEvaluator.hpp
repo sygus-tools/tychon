@@ -141,6 +141,8 @@ namespace ESolver {
 
         void ConretelyEvaluate(const GenExpressionBase* Expr, ConcreteValueBase* Result) const;
 
+        void ConretelyEvaluate(const Expression Expr, ConcreteValueBase* Result) const;
+
         uint32 GetSize() const;
         uint32 GetId() const;
     };

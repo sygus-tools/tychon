@@ -81,25 +81,32 @@ namespace ESolver {
         // Enumeration phases in PBE
         enum class PBEEnumPhase {
             TermExprs,
-            UniqueEvalConditions,
-            RestEvalConditions
+            BuildEvalsUnique,
+            BuildEvalsRest
         };
 
         PBEEnumPhase PBEPhase;
+        uint32 CurEvalIdx;
         vector<Expression> PBEAntecedentExprs;
         vector<Expression> PBEConsequentExprs;
-        vector<ConcreteEvaluator*> PBEUniqueEvalPtrs;
+        vector<ConcreteEvaluator*> PBEEvalPtrsUnique;
+        vector<ConcreteEvaluator*> PBEEvalPtrsRest;
         vector<unique_ptr<ConcreteEvaluator>> PBEEvalPtrs;
-        Expression PBEConditionTreeExpr;
+        Expression PBEDecisionTreeRoot;
+        std::pair<Expression, uint8> PBECurTreeNode;
         const InterpretedFuncOperator* PBEConditionExprOp;
-        const string PBEConditionOpName = "IFTE";
+        // XXX: WARNING competition hack here!
+        const string PBEConditionOpName = "if0";
         ConcreteEvaluator* PBECurrentEvalPtrs[2];
 
         // A terminal expression is an expression that was found consistent
         // at least with one example.
         vector<Expression> PBETermExprs;
-        // maps an evaluator(example) to its terminal expression
-        unordered_map<uint32, std::pair<uint32, bool>> PBEEvalTermExprMap;
+        // maps an evaluator(example) to the id of its terminal expression
+        unordered_map<uint32, uint32> PBEEvalTermExpIdxMap;
+        // maps a decision tree node to its evaluators
+        unordered_map<uint64, pair<ConcreteEvaluator*, ConcreteEvaluator*>> PBEDecisionNodeEvalMap;
+
 
         // Single function case
         inline bool CheckSymbolicValidity(const GenExpressionBase* Exp);
@@ -117,9 +124,9 @@ namespace ESolver {
                                                 const ESFixedTypeBase* Type,
                                                 uint32 ExpansionTypeID);
 
-        virtual CallbackStatus PBEEnumConditionTree(const GenExpressionBase* Exp,
-                                                    const ESFixedTypeBase* Type,
-                                                    uint32 ExpansionTypeID);
+        virtual CallbackStatus PBEEnumDecisionTree(const GenExpressionBase* Exp,
+                                                   const ESFixedTypeBase* Type,
+                                                   uint32 ExpansionTypeID);
 
     public:
         CEGSolver(const ESolverOpts* Opts);

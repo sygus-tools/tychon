@@ -233,6 +233,8 @@ namespace ESolver {
 
         virtual const vector<Expression>& GetChildren() const override;
 
+        void SetChildAt(uint32 Idx, Expression Exp);
+
         virtual void Evaluate(ExpSubstMap SubstExps,
                               VariableMap VarMap,
                               ConcreteValueBase* Result) const override;

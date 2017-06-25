@@ -419,6 +419,12 @@ namespace ESolver {
                                     Result);
     }
 
+    void ConcreteEvaluator::ConretelyEvaluate(const Expression Expr,
+                                              ConcreteValueBase* Result) const
+    {
+        Expr->Evaluate(nullptr, EvalPoints[0].data(), Result);
+    }
+
     uint32 ConcreteEvaluator::GetSize() const
     {
         return EvalPoints.size();
