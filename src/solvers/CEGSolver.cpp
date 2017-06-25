@@ -53,7 +53,6 @@
 #include "../visitors/SpecRewriter.hpp"
 #include "../visitors/Gatherers.hpp"
 #include "../visitors/PBEConsequentsInitializer.hpp"
-#include "../visitors/PBEDecisionTreeNodeLocator.hpp"
 
 
 namespace ESolver {
@@ -61,7 +60,8 @@ namespace ESolver {
     CEGSolver::CEGSolver(const ESolverOpts* Opts)
             : ESolver(Opts), ConcEval(nullptr), ExpEnumerator(nullptr),
               TheMode(CEGSolverMode::CEG),
-              PBEPhase(PBEEnumPhase::TermExprs)
+              PBEPhase(PBESolvePhase::BuildTermExprs),
+              DTBuilder(this)
     {
         // Nothing here
     }
@@ -163,7 +163,7 @@ namespace ESolver {
     {
 
         if (TheMode == CEGSolverMode::PBE) {
-            if (PBEPhase == PBEEnumPhase::TermExprs) {
+            if (PBEPhase == PBESolvePhase::BuildTermExprs) {
                 return PBEEnumTermExprs(Exp, Type, ExpansionTypeID);
             } else {
                 return PBEEnumDecisionTree(Exp, Type, ExpansionTypeID);
@@ -223,7 +223,7 @@ namespace ESolver {
             SMTConcreteValueModel ConcSMTModel;
             TP->GetConcreteModel(RelevantVars, TheSMTModel, ConcSMTModel, this);
             ConcEval->AddPoint(ConcSMTModel);
-            ConcreteEvaluator::ResetSigStore(0);
+            ConcreteEvaluator::ResetSigStore(ConcEval);
 
             if (!Opts.NoDist) {
                 Restart = true;
@@ -238,56 +238,53 @@ namespace ESolver {
                                                   const ESFixedTypeBase* Type,
                                                   uint32 ExpansionTypeID)
     {
-
         CheckResourceLimits();
         uint32 StatusRet = 0;
-
         NumExpressionsTried++;
-        if (Opts.StatsLevel >= 6) {
-            TheLogger.Log4(Exp->ToString()).Log4("... ");
-            TheLogger.Log4("Eval[").Log4(PBECurrentEvalPtrs[0]->GetId()).Log4(
-                    "], ");
-            TheLogger.Log4("Eval[").Log4(PBECurrentEvalPtrs[1]->GetId()).Log4(
-                    "] ... Condition, ");
-        }
-
-        auto Distinguishable =
-                PBECurrentEvalPtrs[0]->CheckSubExpression(
-                        const_cast<GenExpressionBase*>(Exp),
-                        Type,
-                        ExpansionTypeID,
-                        StatusRet);
+        auto Distinguishable = DTCurEvalPtrs.first->CheckSubExpression(
+                const_cast<GenExpressionBase*>(Exp),
+                Type,
+                ExpansionTypeID,
+                StatusRet);
 
         if (!Distinguishable) {
             StatusRet &= ~(CONCRETE_EVAL_DIST);
         }
 
+        auto FstEvalId = DTCurEvalPtrs.first->GetId();
+        auto SndEvalId = DTCurEvalPtrs.second->GetId();
         // subexpr evaluation points are now ready
-        auto FstValue =
-                ConcreteEvaluator::GetSubExprEvalPoint(PBECurrentEvalPtrs[0]->GetId());
-        auto SndValue =
-                ConcreteEvaluator::GetSubExprEvalPoint(PBECurrentEvalPtrs[1]->GetId());
+        auto ThenValue =
+                ConcreteEvaluator::GetSubExprEvalPoint(FstEvalId);
+        auto ElseValue =
+                ConcreteEvaluator::GetSubExprEvalPoint(SndEvalId);
 
         // XXX: WARNING! Competition hack
         // We assume the following:
         // - there is only one grammar for if expression
         // - An evaluation value of 1 means a branch is taken
         // these assumptions are valid for the current SyGuS benchmarks
-        bool ValidCondition = FstValue->GetValue() != SndValue->GetValue()
-                && (FstValue->GetValue() == 1 || SndValue->GetValue() == 1);
+        bool ValidCondition = (ThenValue->GetValue() != ElseValue->GetValue())
+                && (ThenValue->GetValue() == 1 || ElseValue->GetValue() == 1);
+
+        if (Opts.StatsLevel >= 6) {
+            TheLogger.Log4(Exp->ToString()).Log4("... ");
+            TheLogger.Log4("Eval[").Log4(FstEvalId).Log4("], ");
+            TheLogger.Log4("Eval[").Log4(SndEvalId).Log4("] ... Condition, ");
+        }
 
         if (!ValidCondition) {
             if ((StatusRet & CONCRETE_EVAL_DIST) == 0) {
                 if (Opts.StatsLevel >= 6) {
-                    TheLogger.Log4("Invalid, Indist.").Log4("\n");
+                    TheLogger.Log6("Invalid, Indist.").Log6("\n");
                 }
                 return DELETE_EXPRESSION;
             }
             if (Opts.StatsLevel >= 6) {
                 if ((StatusRet & CONCRETE_EVAL_PART) != 0) {
-                    TheLogger.Log4("Invalid, Dist (Partial).").Log4("\n");
+                    TheLogger.Log6("Invalid, Dist (Partial).").Log6("\n");
                 } else {
-                    TheLogger.Log4("Invalid, Dist.").Log4("\n");
+                    TheLogger.Log6("Invalid, Dist.").Log6("\n");
                 }
             }
             NumDistExpressions++;
@@ -296,99 +293,61 @@ namespace ESolver {
         // we found a valid expression to unify both examples
         NumDistExpressions++;
         if (Opts.StatsLevel >= 6) {
-            TheLogger.Log4("Valid.").Log4("\n");
+            TheLogger.Log6("Valid.").Log4("\n");
         }
 
-        auto ThenExpPair =
-                PBEEvalTermExpIdxMap.find(PBECurrentEvalPtrs[0]->GetId());
-        auto ElseExpPair =
-                PBEEvalTermExpIdxMap.find(PBECurrentEvalPtrs[1]->GetId());
-        if (FstValue->GetValue() != 1) {
-            auto TempPair = ThenExpPair;
-            ThenExpPair = ElseExpPair;
-            ElseExpPair = TempPair;
-            auto TempEvalPtr = PBECurrentEvalPtrs[0];
-            PBECurrentEvalPtrs[0] = PBECurrentEvalPtrs[1];
-            PBECurrentEvalPtrs[1] = TempEvalPtr;
-
+        auto ThenExprIdx = PBEEval2TermExpIdxMap[FstEvalId];
+        auto ElseExprIdx = PBEEval2TermExpIdxMap[SndEvalId];
+        if (ThenValue->GetValue() != 1) {
+            swap(FstEvalId, SndEvalId);
+            swap(ThenExprIdx, ElseExprIdx);
+            swap(DTCurEvalPtrs.first, DTCurEvalPtrs.second);
         }
 
         vector<Expression>
-                Children = {GenExpressionBase::ToUserExpression(Exp, this),
-                            PBETermExprs[ThenExpPair->second],
-                            PBETermExprs[ElseExpPair->second]};
-
+                DecisionExprs = {GenExpressionBase::ToUserExpression(Exp, this),
+                                 PBETermExprs[ThenExprIdx],
+                                 PBETermExprs[ElseExprIdx]};
+        DTBuilder.InsertDecisionNode(DTCurLocation,
+                                     DTCurEvalPtrs,
+                                     DecisionExprs);
         if (Opts.StatsLevel >= 4) {
-            TheLogger.Log4("Decision:").Log4(Children[0]);
-            TheLogger.Log4(", Then:").Log4(Children[1]);
-            TheLogger.Log4(", Else:").Log4(Children[2]);
-            TheLogger.Log4(", Eval[").Log4(PBECurrentEvalPtrs[0]->GetId()).Log4(
-                    "], ");
-            TheLogger.Log4("Eval[").Log4(PBECurrentEvalPtrs[1]->GetId()).Log4(
-                    "]").Log4("\n");
+            TheLogger.Log4("Inserted :").Log4(DecisionExprs[0]);
+            TheLogger.Log4(", Then:").Log4(DecisionExprs[1]);
+            TheLogger.Log4(", Else:").Log4(DecisionExprs[2]);
+            TheLogger.Log4(", Eval[").Log4(FstEvalId).Log4("], ");
+            TheLogger.Log4("Eval[").Log4(SndEvalId).Log4("]").Log4("\n");
         }
 
-        if (PBEDecisionTreeRoot == nullptr) {
-            PBEDecisionTreeRoot =
-                    CreateExpression(PBEConditionExprOp, Children);
-            PBEDecisionNodeEvalMap[PBEDecisionTreeRoot->Hash()] =
-                    {PBECurrentEvalPtrs[0], PBECurrentEvalPtrs[1]};
-        } else {
-            auto ExpPtr =
-                    const_cast<UserInterpretedFuncExpression*>
-                    (UserExpressionBase::As<UserInterpretedFuncExpression>(PBECurTreeNode.first));
-
-            // Place in tree
-            auto TermNode = CreateExpression(PBEConditionExprOp, Children);
-            ExpPtr->SetChildAt(PBECurTreeNode.second, TermNode);
-            PBEDecisionNodeEvalMap[TermNode->Hash()] =
-                    {PBECurrentEvalPtrs[0], PBECurrentEvalPtrs[1]};
-        }
-
-        CurEvalIdx++;
-        if (PBEPhase == PBEEnumPhase::BuildEvalsUnique) {
-            if (CurEvalIdx < PBEEvalPtrsUnique.size()) {
-                PBEDecisionTreeNodeLocator::Do(PBEDecisionTreeRoot,
-                                              PBEEvalPtrsUnique[CurEvalIdx],
-                                              PBECurTreeNode);
-
-                auto& EvalPair = PBEDecisionNodeEvalMap[PBECurTreeNode.first->Hash()];
-                if (PBECurTreeNode.second == 1) {
-                    PBECurrentEvalPtrs[0] = EvalPair.first;
-                } else {
-                    PBECurrentEvalPtrs[0] = EvalPair.second;
+        // Get next work item
+        while (DTBuilder.LocateNextEvalNode(DTCurLocation, DTCurEvalPtrs)) {
+            if (PBEEval2TermExpIdxMap[DTCurEvalPtrs.first->GetId()] ==
+                    PBEEval2TermExpIdxMap[DTCurEvalPtrs.second->GetId()]) {
+                DTBuilder.InsertSharedDecisionNode(DTCurLocation, DTCurEvalPtrs);
+                if (Opts.StatsLevel >= 4) {
+                    TheLogger.Log4("Inserted Shared:").Log4(DTCurLocation.Node->GetConditionExpr());
+                    TheLogger.Log4(", Eval[").Log4(DTCurEvalPtrs.first->GetId()).Log4("], ");
+                    TheLogger.Log4("Eval[").Log4(DTCurEvalPtrs.second->GetId()).Log4("]").Log4("\n");
                 }
-                PBECurrentEvalPtrs[1] = PBEEvalPtrsUnique[CurEvalIdx];
-                ConcreteEvaluator::ResetSigStore(PBECurrentEvalPtrs[0]->GetId());
-                Restart = true;
-                return STOP_ENUMERATION;
-            } else {
-                CurEvalIdx = 0;
-                PBEPhase = PBEEnumPhase::BuildEvalsRest;
+                continue;
             }
+            ConcreteEvaluator::ResetSigStore(DTCurEvalPtrs.first);
+            Restart = true;
+            return STOP_ENUMERATION;
         }
-        if (CurEvalIdx < PBEEvalPtrsRest.size()) {
-            while (CurEvalIdx < PBEEvalPtrsRest.size()) {
-                PBEDecisionTreeNodeLocator::Do(PBEDecisionTreeRoot,
-                                               PBEEvalPtrsRest[CurEvalIdx],
-                                               PBECurTreeNode);
 
-                auto& EvalsPair =
-                        PBEDecisionNodeEvalMap[PBECurTreeNode.first->Hash()];
-                if (PBECurTreeNode.second == 1) {
-                    PBECurrentEvalPtrs[0] = EvalsPair.first;
-                } else {
-                    PBECurrentEvalPtrs[0] = EvalsPair.second;
-                }
-                PBECurrentEvalPtrs[1] = PBEEvalPtrsRest[CurEvalIdx];
-                if (PBEEvalTermExpIdxMap[PBECurrentEvalPtrs[0]->GetId()]
-                        == PBEEvalTermExpIdxMap[PBECurrentEvalPtrs[1]->GetId()]) {
-                    CurEvalIdx++;
-                    continue;
-                }
-                ConcreteEvaluator::ResetSigStore(PBECurrentEvalPtrs[0]->GetId());
-                Restart = true;
-                return STOP_ENUMERATION;
+        DTBuilder.Do();
+        for(const auto& Eval: PBEEvalPtrs){
+            ConcreteValueBase Result;
+            Eval->ConcretelyEvaluate(DTBuilder.GetTreeExpr(), &Result);
+            if (Opts.StatsLevel >= 4) {
+                std::stringstream stream;
+                stream << std::setfill ('0') << std::setw(16)
+                       << std::hex<< Result.GetValue();
+                std::string HexValue(stream.str());
+                TheLogger.Log4("Idential Expr:");
+                TheLogger.Log4(", Eval[").Log4(Eval->GetId()).Log4("], ");
+                TheLogger.Log4("Result: #x").Log4(HexValue).Log4("\n");
             }
         }
 
@@ -397,32 +356,31 @@ namespace ESolver {
 
         Solutions.push_back(vector<pair<const SynthFuncOperator*,
                                         Expression>>());
-        Solutions.back().push_back({SynthFuncs[0],
-                                    PBEDecisionTreeRoot});
+        Solutions.back().push_back({SynthFuncs[0], DTBuilder.GetTreeExpr()});
         this->Complete = true;
         return STOP_ENUMERATION;
     }
 
-    CallbackStatus CEGSolver::PBEEnumTermExprs(const GenExpressionBase* Exp,
+    CallbackStatus CEGSolver::PBEEnumTermExprs(const GenExpressionBase* Expr,
                                                const ESFixedTypeBase* Type,
                                                uint32 ExpansionTypeID)
     {
         CheckResourceLimits();
         NumExpressionsTried++;
-        // get a unique evaluator still not mapped to a terminal expression
-        const uint32 EvalIdx = PBEEvalPtrsUnique.back()->GetId();
+        // get a unique example still not yet mapped to a terminal expression
+        auto CurEval = DTBuilder.GetQueueBack();
+        const uint32 CurEvalIdx = CurEval->GetId();
 
         if (Opts.StatsLevel >= 4) {
-            TheLogger.Log4(Exp->ToString()).Log4("... ");
-            TheLogger.Log4("Eval[").Log4(PBEEvalPtrs[EvalIdx]->GetId()).Log4(
-                    "], ");
+            TheLogger.Log4(Expr->ToString()).Log4("... ");
+            TheLogger.Log4("Eval[").Log4(CurEvalIdx).Log4("], ");
         }
 
         uint32 StatusRet = 0;
-        bool ConcValid = PBEEvalPtrs[EvalIdx]->CheckConcreteValidity(Exp,
-                                                                     Type,
-                                                                     ExpansionTypeID,
-                                                                     StatusRet);
+        bool ConcValid = CurEval->CheckConcreteValidity(Expr,
+                                                        Type,
+                                                        ExpansionTypeID,
+                                                        StatusRet);
         if (!ConcValid) {
             if ((StatusRet & CONCRETE_EVAL_DIST) == 0) {
                 if (Opts.StatsLevel >= 4) {
@@ -446,37 +404,34 @@ namespace ESolver {
 
         // valid terminal expr was found for this example, keep it
         const uint32 TermExprIdx = PBETermExprs.size();
-        PBEEvalTermExpIdxMap[PBEEvalPtrs[EvalIdx]->GetId()] = TermExprIdx;
-        PBETermExprs.push_back(GenExpressionBase::ToUserExpression(Exp, this));
-        // TODO: create expr hasher functor? maybe nicer
+        PBEEval2TermExpIdxMap[CurEvalIdx] = TermExprIdx;
+        PBETermExprs.push_back(GenExpressionBase::ToUserExpression(Expr, this));
         NumDistExpressions++;
 
         bool IsSetFirstInvalidEval = false;
         bool IsConcValidUsingPrevExpr = false;
-        for (uint32 i = EvalIdx + 1; i < PBEEvalPtrs.size(); ++i) {
-            const auto
-                    result = PBEEvalTermExpIdxMap.find(PBEEvalPtrs[i]->GetId());
+        for (uint32 i = CurEvalIdx + 1; i < PBEEvalPtrs.size(); ++i) {
 
-            if (result != PBEEvalTermExpIdxMap.cend()) {
+            if (PBEEval2TermExpIdxMap.find(PBEEvalPtrs[i]->GetId())
+                    != PBEEval2TermExpIdxMap.cend()) {
                 // this evaluator already has a terminal expr
                 continue;
             }
             IsConcValidUsingPrevExpr =
-                    PBEEvalPtrs[i]->CheckConcreteValidity(Exp,
+                    PBEEvalPtrs[i]->CheckConcreteValidity(Expr,
                                                           Type,
                                                           ExpansionTypeID,
                                                           StatusRet);
-
             if (IsConcValidUsingPrevExpr) {
-                PBEEvalTermExpIdxMap[PBEEvalPtrs[i]->GetId()] = TermExprIdx;
-                PBEEvalPtrsRest.push_back(PBEEvalPtrs[i].get());
+                PBEEval2TermExpIdxMap[PBEEvalPtrs[i]->GetId()] = TermExprIdx;
+                DTBuilder.AddDupTermExprExample(PBEEvalPtrs[i].get());
                 if (Opts.StatsLevel >= 4) {
                     TheLogger.Log4("Eval[").Log4(i).Log4("], ");
                     TheLogger.Log4("Duplicate valid.").Log4("\n");
                 }
             } else {
                 if (!IsSetFirstInvalidEval) {
-                    PBEEvalPtrsUnique.push_back(PBEEvalPtrs[i].get());
+                    DTBuilder.AddUniqTermExprExample(PBEEvalPtrs[i].get());
                     IsSetFirstInvalidEval = true;
                 }
                 if (Opts.StatsLevel >= 4) {
@@ -486,40 +441,25 @@ namespace ESolver {
             }
         }
 
-        // check if a valid terminal expr was found for all examples
-        if (PBEEvalTermExpIdxMap.size() == PBEEvalPtrs.size()) {
-            if (PBETermExprs.size() == 1) {
-                // only one terminal expression. No need for unification
-                this->Complete = true;
-                Solutions.push_back(vector<pair<const SynthFuncOperator*,
-                                                Expression>>());
-                Solutions.back().push_back({SynthFuncs[0],
-                                            PBETermExprs.back()});
-                return STOP_ENUMERATION;
-            }
-
-            PBEPhase = PBEEnumPhase::BuildEvalsUnique;
-            PBECurrentEvalPtrs[0] = PBEEvalPtrsUnique[0];
-            PBECurrentEvalPtrs[1] = PBEEvalPtrsUnique[1];
-            vector<const ESFixedTypeBase*> FuncDomain(3, Exp->GetType());
-
-            PBEConditionExprOp = OperatorBase::As<InterpretedFuncOperator>
-                    (LookupOperator(PBEConditionOpName, FuncDomain));
-            if (PBEConditionExprOp == nullptr) {
-                throw InternalError((string)"Could not locate <if0> conditional grammar!" +
-                        "\nAt: " + __FILE__ + ":" + to_string(__LINE__));
-
-            }
-
-            CurEvalIdx = 1;
-            ConcreteEvaluator::ResetSigStore(0);
-            Restart = true;
-            return STOP_ENUMERATION;
-        } else {
-            ConcreteEvaluator::ResetSigStore(PBEEvalPtrsUnique.back()->GetId());
+        if (PBEEval2TermExpIdxMap.size() != PBEEvalPtrs.size()) {
+            ConcreteEvaluator::ResetSigStore(DTBuilder.GetQueueBack());
             Restart = true;
             return STOP_ENUMERATION;
         }
+        // now a valid terminal expr was found for all examples
+        if (PBETermExprs.size() == 1) {
+            // only one terminal expression. No need for unification
+            this->Complete = true;
+            Solutions.push_back(vector<pair<const SynthFuncOperator*, Expression>>());
+            Solutions.back().push_back({SynthFuncs[0], PBETermExprs.back()});
+            return STOP_ENUMERATION;
+        }
+        DTBuilder.Initialize(Type);
+        DTBuilder.LocateNextEvalNode(DTCurLocation, DTCurEvalPtrs);
+        ConcreteEvaluator::ResetSigStore(DTCurEvalPtrs.first);
+        PBEPhase = PBESolvePhase::BuildDecisionTree;
+        Restart = true;
+        return STOP_ENUMERATION;
     }
 
     // For multifunction synthesis
@@ -564,7 +504,7 @@ namespace ESolver {
             SMTConcreteValueModel ConcSMTModel;
             TP->GetConcreteModel(RelevantVars, TheSMTModel, ConcSMTModel, this);
             ConcEval->AddPoint(ConcSMTModel);
-            ConcreteEvaluator::ResetSigStore(0);
+            ConcreteEvaluator::ResetSigStore(ConcEval);
             return NONE_STATUS;
         }
     }
@@ -727,6 +667,7 @@ namespace ESolver {
         PBEConstraints.reserve(PBEAntecedentExprs.size());
         PBEBaseAuxVarVecs.resize(PBEAntecedentExprs.size());
         PBEDerivedAuxVarVecs.resize(PBEAntecedentExprs.size());
+        DTBuilder.Reset(PBEAntecedentExprs.size());
 
         assert(SynthFunAppMaps.size() == 1
                        && SynthFunAppMaps.back().size() == PBEAntecedentExprs.size()
@@ -765,8 +706,8 @@ namespace ESolver {
             PBEEvalPtrs.back()->AddPBEPoint(Model);
         }
         // initialization for first evaluator
-        PBEEvalPtrsUnique.push_back(PBEEvalPtrs.front().get());
-        ConcreteEvaluator::ResetSigStore(0);
+        DTBuilder.AddUniqTermExprExample(PBEEvalPtrs.front().get());
+        ConcreteEvaluator::ResetSigStore(PBEEvalPtrs.front().get());
     }
 
     void CEGSolver::EndSolve()

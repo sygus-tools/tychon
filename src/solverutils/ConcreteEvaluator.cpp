@@ -96,10 +96,6 @@ namespace ESolver {
         }
     }
 
-    ConcreteEvaluator::~ConcreteEvaluator()
-    {
-    }
-
     void ConcreteEvaluator::AddPoint(const SMTConcreteValueModel& Model)
     {
         // Add another point
@@ -204,10 +200,10 @@ namespace ESolver {
         ++NumPoints;
     }
 
-    void ConcreteEvaluator::ResetSigStore(uint32 MasterEvalId)
+    void ConcreteEvaluator::ResetSigStore(ConcreteEvaluator* ConcEval)
     {
         // Subexpression distinguishability check is valid for this evaluator only
-        SigStoreMasterEvalId = MasterEvalId;
+        SigStoreMasterEvalId = ConcEval->GetId();
         // Recreate the pool for the new size
         if (SigVecPool != nullptr) {
             delete SigVecPool;
@@ -410,8 +406,8 @@ namespace ESolver {
         return true;
     }
 
-    void ConcreteEvaluator::ConretelyEvaluate(const GenExpressionBase* Expr,
-                                              ConcreteValueBase* Result) const
+    void ConcreteEvaluator::ConcretelyEvaluate(const GenExpressionBase* Expr,
+                                               ConcreteValueBase* Result) const
     {
         GenExpressionBase::Evaluate(Expr,
                                     EvalPoints[0].data(),
@@ -419,8 +415,8 @@ namespace ESolver {
                                     Result);
     }
 
-    void ConcreteEvaluator::ConretelyEvaluate(const Expression Expr,
-                                              ConcreteValueBase* Result) const
+    void ConcreteEvaluator::ConcretelyEvaluate(const UserExpressionBase* Expr,
+                                               ConcreteValueBase* Result) const
     {
         Expr->Evaluate(nullptr, EvalPoints[0].data(), Result);
     }

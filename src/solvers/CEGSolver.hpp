@@ -47,15 +47,17 @@
 #include "../containers/ESSmartPtr.hpp"
 #include "../z3interface/Z3Objects.hpp"
 #include "../utils/Hashers.hpp"
+#include "../solverutils/DecisionTreeExprBuilder.hpp"
 
 namespace ESolver {
 
-    enum class CEGSolverMode {
+    enum class CEGSolverMode
+    {
         CEG,
         PBE
     };
 
-    class CEGSolver : public ESolver
+    class CEGSolver: public ESolver
     {
         friend class ConcreteEvaluator;
 
@@ -79,48 +81,51 @@ namespace ESolver {
         CEGSolverMode TheMode;
 
         // Enumeration phases in PBE
-        enum class PBEEnumPhase {
-            TermExprs,
-            BuildEvalsUnique,
-            BuildEvalsRest
+        enum class PBESolvePhase
+        {
+            BuildTermExprs,
+            BuildDecisionTree,
         };
 
-        PBEEnumPhase PBEPhase;
-        uint32 CurEvalIdx;
+        PBESolvePhase PBEPhase;
         vector<Expression> PBEAntecedentExprs;
         vector<Expression> PBEConsequentExprs;
-        vector<ConcreteEvaluator*> PBEEvalPtrsUnique;
-        vector<ConcreteEvaluator*> PBEEvalPtrsRest;
         vector<unique_ptr<ConcreteEvaluator>> PBEEvalPtrs;
-        Expression PBEDecisionTreeRoot;
-        std::pair<Expression, uint8> PBECurTreeNode;
-        const InterpretedFuncOperator* PBEConditionExprOp;
-        // XXX: WARNING competition hack here!
-        const string PBEConditionOpName = "if0";
-        ConcreteEvaluator* PBECurrentEvalPtrs[2];
+        DecisionTreeExprBuilder DTBuilder;
+        DecisionTreeNodeLocation DTCurLocation;
+        DTBuilderCurEvals DTCurEvalPtrs;
 
         // A terminal expression is an expression that was found consistent
         // at least with one example.
         vector<Expression> PBETermExprs;
         // maps an evaluator(example) to the id of its terminal expression
-        unordered_map<uint32, uint32> PBEEvalTermExpIdxMap;
+        unordered_map<uint32, uint32> PBEEval2TermExpIdxMap;
         // maps a decision tree node to its evaluators
-        unordered_map<uint64, pair<ConcreteEvaluator*, ConcreteEvaluator*>> PBEDecisionNodeEvalMap;
+        unordered_map<uint64, pair<ConcreteEvaluator*, ConcreteEvaluator*>>
+                PBEDecisionNode2EvalMap;
 
-
+    private:
         // Single function case
         inline bool CheckSymbolicValidity(const GenExpressionBase* Exp);
         // Multifunction case
         inline bool CheckSymbolicValidity(GenExpressionBase const* const* Exps);
 
+        template<class T>
+        inline void swap(T& x, T& y)
+        {
+            T tmp = x;
+            x = y;
+            y = tmp;
+        }
+
         void PBEInitializeEvals(vector<pair<string, string>>& ConstRelevantVars,
                                 vector<Expression>& PBEConstraints,
                                 vector<vector<const AuxVarOperator*>>& PBEBaseAuxVarVecs,
                                 vector<vector<const AuxVarOperator*>>& PBEDerivedAuxVarVecs,
-                                vector<map<vector<uint32>,uint32>>& PBESynthFunAppMap,
+                                vector<map<vector<uint32>, uint32>>& PBESynthFunAppMap,
                                 vector<const ESFixedTypeBase*>& SynthFuncTypes);
 
-        virtual CallbackStatus PBEEnumTermExprs(const GenExpressionBase* Exp,
+        virtual CallbackStatus PBEEnumTermExprs(const GenExpressionBase* Expr,
                                                 const ESFixedTypeBase* Type,
                                                 uint32 ExpansionTypeID);
 
@@ -154,7 +159,6 @@ namespace ESolver {
 } /* End namespace */
 
 #endif /* __ESOLVER_CEG_SOLVER_HPP */
-
 
 //
 // CEGSolver.hpp ends here

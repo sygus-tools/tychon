@@ -68,59 +68,58 @@ set(CMAKE_CXX_FLAGS_PROFLTO "-O3 -flto=n -fprofile-use=${PROFILE_DIR}" CACHE STR
 ## target definitions #########################################################
 ###############################################################################
 
-set(tychon_source_dir ${CMAKE_SOURCE_DIR}/src)
-
 set(tychon_source_files
-  ${tychon_source_dir}/descriptions/GrammarNodes.cpp
-  ${tychon_source_dir}/descriptions/Operators.cpp
-  ${tychon_source_dir}/descriptions/Grammar.cpp
-  ${tychon_source_dir}/descriptions/Builtins.cpp
-  ${tychon_source_dir}/descriptions/FunctorBase.cpp
-  ${tychon_source_dir}/descriptions/ESType.cpp
-  ${tychon_source_dir}/values/ValueManager.cpp
-  ${tychon_source_dir}/values/Signature.cpp
-  ${tychon_source_dir}/values/ConcreteValueBase.cpp
-  ${tychon_source_dir}/z3interface/Z3TheoremProver.cpp
-  ${tychon_source_dir}/z3interface/Z3Objects.cpp
-  ${tychon_source_dir}/z3interface/TheoremProver.cpp
-  ${tychon_source_dir}/main-solvers/SynthLib2Solver.cpp
-  ${tychon_source_dir}/scoping/ScopeManager.cpp
-  ${tychon_source_dir}/scoping/ESolverScope.cpp
-  ${tychon_source_dir}/partitions/PartitionGenerator.cpp
-  ${tychon_source_dir}/partitions/CrossProductGenerator.cpp
-  ${tychon_source_dir}/partitions/SymPartitionGenerator.cpp
-  ${tychon_source_dir}/external/spookyhash/SpookyHash.cpp
-  ${tychon_source_dir}/solverutils/ConcreteEvaluator.cpp
-  ${tychon_source_dir}/solverutils/TypeManager.cpp
-  ${tychon_source_dir}/solverutils/ConstManager.cpp
-  ${tychon_source_dir}/solverutils/EvalRule.cpp
-  ${tychon_source_dir}/logics/BVLogic.cpp
-  ${tychon_source_dir}/logics/ESolverLogic.cpp
-  ${tychon_source_dir}/logics/LIALogic.cpp
-  ${tychon_source_dir}/utils/Indent.cpp
-  ${tychon_source_dir}/utils/ResourceLimitManager.cpp
-  ${tychon_source_dir}/utils/UIDGenerator.cpp
-  ${tychon_source_dir}/utils/GNCostPair.cpp
-  ${tychon_source_dir}/utils/Logger.cpp
-  ${tychon_source_dir}/utils/TimeValue.cpp
-  ${tychon_source_dir}/utils/MemStats.cpp
-  ${tychon_source_dir}/enumerators/EnumeratorBase.cpp
-  ${tychon_source_dir}/enumerators/CFGEnumerator.cpp
-  ${tychon_source_dir}/exceptions/ESException.cpp
-  ${tychon_source_dir}/solvers/ESolver.cpp
-  ${tychon_source_dir}/solvers/CEGSolver.cpp
-  ${tychon_source_dir}/visitors/SpecRewriter.cpp
-  ${tychon_source_dir}/visitors/Gatherers.cpp
-  ${tychon_source_dir}/visitors/ExpCheckers.cpp
-  ${tychon_source_dir}/visitors/ExpressionVisitorBase.cpp
-  ${tychon_source_dir}/expressions/ExprManager.cpp
-  ${tychon_source_dir}/expressions/GenExpression.cpp
-  ${tychon_source_dir}/expressions/UserExpression.cpp
-  ${tychon_source_dir}/visitors/PBEConsequentsInitializer.cpp
-  ${tychon_source_dir}/visitors/PBEDecisionTreeNodeLocator.cpp)
+  src/descriptions/GrammarNodes.cpp
+  src/descriptions/Operators.cpp
+  src/descriptions/Grammar.cpp
+  src/descriptions/Builtins.cpp
+  src/descriptions/FunctorBase.cpp
+  src/descriptions/ESType.cpp
+  src/values/ValueManager.cpp
+  src/values/Signature.cpp
+  src/values/ConcreteValueBase.cpp
+  src/z3interface/Z3TheoremProver.cpp
+  src/z3interface/Z3Objects.cpp
+  src/z3interface/TheoremProver.cpp
+  src/main-solvers/SynthLib2Solver.cpp
+  src/scoping/ScopeManager.cpp
+  src/scoping/ESolverScope.cpp
+  src/partitions/PartitionGenerator.cpp
+  src/partitions/CrossProductGenerator.cpp
+  src/partitions/SymPartitionGenerator.cpp
+  src/external/spookyhash/SpookyHash.cpp
+  src/solverutils/ConcreteEvaluator.cpp
+  src/solverutils/TypeManager.cpp
+  src/solverutils/ConstManager.cpp
+  src/solverutils/EvalRule.cpp
+  src/logics/BVLogic.cpp
+  src/logics/ESolverLogic.cpp
+  src/logics/LIALogic.cpp
+  src/utils/Indent.cpp
+  src/utils/ResourceLimitManager.cpp
+  src/utils/UIDGenerator.cpp
+  src/utils/GNCostPair.cpp
+  src/utils/Logger.cpp
+  src/utils/TimeValue.cpp
+  src/utils/MemStats.cpp
+  src/enumerators/EnumeratorBase.cpp
+  src/enumerators/CFGEnumerator.cpp
+  src/exceptions/ESException.cpp
+  src/solvers/ESolver.cpp
+  src/solvers/CEGSolver.cpp
+  src/visitors/SpecRewriter.cpp
+  src/visitors/Gatherers.cpp
+  src/visitors/ExpCheckers.cpp
+  src/visitors/ExpressionVisitorBase.cpp
+  src/expressions/ExprManager.cpp
+  src/expressions/GenExpression.cpp
+  src/expressions/UserExpression.cpp
+  src/visitors/PBEConsequentsInitializer.cpp
+  src/visitors/DecisionTreeNodeLocator.cpp
+  src/solverutils/DecisionTreeExprBuilder.cpp
+  src/solverutils/DecisionTreeNode.cpp)
 
-set(main_source_file
-  ${tychon_source_dir}/main/ESolverSynthLib.cpp)
+set(main_source_file src/main/ESolverSynthLib.cpp)
 
 add_library(libsynthlib2parser STATIC IMPORTED)
 find_library(libsynthlib2parser_path NAMES "libsynthlib2parser.a")

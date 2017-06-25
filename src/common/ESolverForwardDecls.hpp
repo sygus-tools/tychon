@@ -165,6 +165,13 @@ namespace ESolver {
     class VarGatherer;
     class SpecRewriter;
     class PBEConsequentsInitializer;
+    class DecisionTreeVisitorBase;
+    class DecisionTreeNodeLocator;
+
+    // Decision tree
+    class DecisionTreeNode;
+    class DecisionTreeNodeLocation;
+    class DecisionTreeExprBuilder;
 
     // Hashers and Equality
     class TypeHasher;
@@ -177,6 +184,8 @@ namespace ESolver {
     class GNCostPairPtrEquals;
     class ExpressionHasher;
     class ExpressionEquals;
+    class DecisionTreeNodeLocationHasher;
+    class DecisionTreeNodeLocationEquals;
 
     // SMT solver wrappers
     class TheoremProver;

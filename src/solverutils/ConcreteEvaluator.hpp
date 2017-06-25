@@ -105,14 +105,13 @@ namespace ESolver {
                           const vector<const ESFixedTypeBase*>& SynthFuncTypes,
                           Logger& TheLogger, uint32 EvalId = 0);
 
-
-        ~ConcreteEvaluator();
+        virtual ~ConcreteEvaluator() = default;
 
         void AddPoint(const SMTConcreteValueModel& Model);
 
         void AddPBEPoint(const SMTConcreteValueModel& Model);
 
-        static void ResetSigStore(uint32 MasterEvalId = 0);
+        static void ResetSigStore(ConcreteEvaluator* ConcEval = 0);
 
         static void Finalize();
 
@@ -125,6 +124,7 @@ namespace ESolver {
                                    const ESFixedTypeBase* Type,
                                    uint32 EvalTypeID,
                                    uint32& Status);
+
         bool CheckSubExpression(GenExpressionBase* Exp,
                                 const ESFixedTypeBase* Type,
                                 uint32 EvalTypeID, uint32& Status);
@@ -139,9 +139,11 @@ namespace ESolver {
             return SubExpEvalPoints[PointIdx][0];
         }
 
-        void ConretelyEvaluate(const GenExpressionBase* Expr, ConcreteValueBase* Result) const;
+        void ConcretelyEvaluate(const GenExpressionBase* Expr,
+                                ConcreteValueBase* Result) const;
 
-        void ConretelyEvaluate(const Expression Expr, ConcreteValueBase* Result) const;
+        void ConcretelyEvaluate(const UserExpressionBase* Expr,
+                                ConcreteValueBase* Result) const;
 
         uint32 GetSize() const;
         uint32 GetId() const;
