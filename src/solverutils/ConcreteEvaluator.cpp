@@ -406,19 +406,39 @@ namespace ESolver {
         return true;
     }
 
-    void ConcreteEvaluator::ConcretelyEvaluate(const GenExpressionBase* Expr,
+    bool ConcreteEvaluator::CheckExampleValidity(const UserExpressionBase* Exp)
+    {
+        auto ExampleValue =
+                RewrittenSpec->GetChildren()[1]->GetChildren()[1]->ToString();
+        ConcreteValueBase Result;
+        ConcretelyEvaluate(Exp, &Result);
+
+        std::stringstream stream;
+        stream << std::setfill ('0') << std::setw(16)
+               << std::hex<< Result.GetValue();
+        std::string ResultValue("#x" + stream.str());
+
+        return ExampleValue == ResultValue;
+    }
+
+    void ConcreteEvaluator::ConcretelyEvaluate(const GenExpressionBase* Exp,
                                                ConcreteValueBase* Result) const
     {
-        GenExpressionBase::Evaluate(Expr,
+        GenExpressionBase::Evaluate(Exp,
                                     EvalPoints[0].data(),
                                     SynthFunAppMaps[0][0].first.data(),
                                     Result);
     }
 
-    void ConcreteEvaluator::ConcretelyEvaluate(const UserExpressionBase* Expr,
+    void ConcreteEvaluator::ConcretelyEvaluate(const UserExpressionBase* Exp,
                                                ConcreteValueBase* Result) const
     {
-        Expr->Evaluate(nullptr, EvalPoints[0].data(), Result);
+        Exp->Evaluate(nullptr, EvalPoints[0].data(), Result);
+    }
+
+    const UserExpressionBase* ConcreteEvaluator::GetExpression() const
+    {
+        return RewrittenSpec.GetPtr();
     }
 
     uint32 ConcreteEvaluator::GetSize() const

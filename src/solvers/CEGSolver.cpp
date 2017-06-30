@@ -312,7 +312,7 @@ namespace ESolver {
                                      DTCurEvalPtrs,
                                      DecisionExprs);
         if (Opts.StatsLevel >= 4) {
-            TheLogger.Log4("Inserted :").Log4(DecisionExprs[0]);
+            TheLogger.Log4("Unique node: ").Log4(DecisionExprs[0]);
             TheLogger.Log4(", Then:").Log4(DecisionExprs[1]);
             TheLogger.Log4(", Else:").Log4(DecisionExprs[2]);
             TheLogger.Log4(", Eval[").Log4(FstEvalId).Log4("], ");
@@ -325,8 +325,8 @@ namespace ESolver {
                     PBEEval2TermExpIdxMap[DTCurEvalPtrs.second->GetId()]) {
                 DTBuilder.InsertSharedDecisionNode(DTCurLocation, DTCurEvalPtrs);
                 if (Opts.StatsLevel >= 4) {
-                    TheLogger.Log4("Inserted Shared:").Log4(DTCurLocation.Node->GetConditionExpr());
-                    TheLogger.Log4(", Eval[").Log4(DTCurEvalPtrs.first->GetId()).Log4("], ");
+                    TheLogger.Log4("Shared node:");
+                    TheLogger.Log4(" Eval[").Log4(DTCurEvalPtrs.first->GetId()).Log4("], ");
                     TheLogger.Log4("Eval[").Log4(DTCurEvalPtrs.second->GetId()).Log4("]").Log4("\n");
                 }
                 continue;
@@ -337,17 +337,21 @@ namespace ESolver {
         }
 
         DTBuilder.Do();
-        for(const auto& Eval: PBEEvalPtrs){
-            ConcreteValueBase Result;
-            Eval->ConcretelyEvaluate(DTBuilder.GetTreeExpr(), &Result);
-            if (Opts.StatsLevel >= 4) {
-                std::stringstream stream;
-                stream << std::setfill ('0') << std::setw(16)
-                       << std::hex<< Result.GetValue();
-                std::string HexValue(stream.str());
-                TheLogger.Log4("Idential Expr:");
-                TheLogger.Log4(", Eval[").Log4(Eval->GetId()).Log4("], ");
-                TheLogger.Log4("Result: #x").Log4(HexValue).Log4("\n");
+
+        if (Opts.StatsLevel >= 2) {
+            bool Valid = true;
+            TheLogger.Log2("Solution found, validating ... ");
+            for(const auto& Eval: PBEEvalPtrs){
+                auto Result = Eval->CheckExampleValidity(DTBuilder.GetTreeExpr());
+                if (!Result) {
+                    TheLogger.Log2(" Eval[").Log2(Eval->GetId()).Log2("], ");
+                    Valid = false;
+                }
+            }
+            if (Valid) {
+                TheLogger.Log2("Valid.\n");
+            } else {
+                TheLogger.Log2("Invalid.\n");
             }
         }
 
@@ -402,6 +406,10 @@ namespace ESolver {
             TheLogger.Log4("Valid.").Log4("\n");
         }
 
+        if (Opts.StatsLevel >= 2) {
+            TheLogger.Log2("Found expression for example [").Log2(CurEvalIdx).Log2("]\n");
+        }
+
         // valid terminal expr was found for this example, keep it
         const uint32 TermExprIdx = PBETermExprs.size();
         PBEEval2TermExpIdxMap[CurEvalIdx] = TermExprIdx;
@@ -454,6 +462,11 @@ namespace ESolver {
             Solutions.back().push_back({SynthFuncs[0], PBETermExprs.back()});
             return STOP_ENUMERATION;
         }
+        if (Opts.StatsLevel >= 2) {
+            TheLogger.Log2("Terminal expressions done. ");
+            TheLogger.Log2("Building decision tree ... ").Log2("\n");
+        }
+
         DTBuilder.Initialize(Type);
         DTBuilder.LocateNextEvalNode(DTCurLocation, DTCurEvalPtrs);
         ConcreteEvaluator::ResetSigStore(DTCurEvalPtrs.first);
@@ -531,9 +544,9 @@ namespace ESolver {
                                                ConstRelevantVars,
                                                PBEAntecedentExprs);
 
-        if (Opts.StatsLevel >= 2) {
-            TheLogger.Log2("Rewritten Constraint:").Log2("\n");
-            TheLogger.Log2(RewrittenConstraint).Log2("\n");
+        if (Opts.StatsLevel >= 3) {
+            TheLogger.Log3("Rewritten Constraint:").Log3("\n");
+            TheLogger.Log3(RewrittenConstraint).Log3("\n");
         }
 
         OrigConstraint = Constraint;

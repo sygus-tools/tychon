@@ -15,6 +15,7 @@
 #include "../solvers/ESolver.hpp"
 #include "../visitors/DecisionTreeNodeLocator.hpp"
 #include "../descriptions/Operators.hpp"
+#include "../solverutils/ConcreteEvaluator.hpp"
 
 namespace ESolver {
 
@@ -25,7 +26,6 @@ namespace ESolver {
     void DecisionTreeExprBuilder::Reset(uint32 ExampleNum)
     {
         m_QueueIdx = 0;
-        m_RootExpr = Expression::NullObject;
         m_TreeNodes.clear();
         m_EvalsQueue.clear();
         m_EvalsQueue.reserve(ExampleNum);
@@ -116,6 +116,7 @@ namespace ESolver {
         if (m_TreeNodes.empty()) {
             m_RootExpr = m_Solver->CreateExpression(m_ConditionExprOp, NodeExprs);
             m_TreeNodes.emplace_back(DecisionTreeNode(m_RootExpr, Evals.first, Evals.second));
+
         } else {
             auto SharedNodes = m_SharedDecisionNodes.equal_range(NodeLocation);
             for (auto It = SharedNodes.first; It != SharedNodes.second; ++It) {
@@ -142,13 +143,13 @@ namespace ESolver {
             DecisionTreeNodeLocation& NodeLocation,
             DTBuilderCurEvals& Evals)
     {
-        ConcreteEvaluator* ValidEval;
+        ConcreteEvaluator* QueuedEval;
         if (Evals.first == NodeLocation.Node->GetThenEval()
                 || Evals.first == NodeLocation.Node->GetThenEval() ) {
-            ValidEval = Evals.second;
+            QueuedEval = Evals.second;
         } else {
-            ValidEval = Evals.first;
+            QueuedEval = Evals.first;
         }
-        m_SharedDecisionNodes.insert({NodeLocation, ValidEval});
+        m_SharedDecisionNodes.insert({NodeLocation, QueuedEval});
     }
 }

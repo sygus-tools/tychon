@@ -59,7 +59,6 @@ namespace ESolver {
 
     class CEGSolver: public ESolver
     {
-        friend class ConcreteEvaluator;
 
     private:
         ConcreteEvaluator* ConcEval;

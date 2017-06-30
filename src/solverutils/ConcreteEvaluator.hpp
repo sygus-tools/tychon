@@ -125,6 +125,8 @@ namespace ESolver {
                                    uint32 EvalTypeID,
                                    uint32& Status);
 
+        bool CheckExampleValidity(const UserExpressionBase* Exp);
+
         bool CheckSubExpression(GenExpressionBase* Exp,
                                 const ESFixedTypeBase* Type,
                                 uint32 EvalTypeID, uint32& Status);
@@ -139,12 +141,13 @@ namespace ESolver {
             return SubExpEvalPoints[PointIdx][0];
         }
 
-        void ConcretelyEvaluate(const GenExpressionBase* Expr,
+        void ConcretelyEvaluate(const GenExpressionBase* Exp,
                                 ConcreteValueBase* Result) const;
 
-        void ConcretelyEvaluate(const UserExpressionBase* Expr,
+        void ConcretelyEvaluate(const UserExpressionBase* Exp,
                                 ConcreteValueBase* Result) const;
 
+        const UserExpressionBase* GetExpression() const;
         uint32 GetSize() const;
         uint32 GetId() const;
     };
