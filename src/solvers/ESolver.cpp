@@ -486,9 +486,9 @@ namespace ESolver {
         Expression Retval = new UserLetExpression(Bindings, BoundInExpression);
         return ExpMgr->GetExp(Retval);
     }
-    
-    Expression ESolver::CreateExpression(const OperatorBase* OpInfo,
-                                         const vector<Expression>& Children)
+
+    Expression ESolver::CreateRawExpression(const OperatorBase* OpInfo,
+                                            const vector<Expression>& Children)
     {
         Expression NewExp;
         // Type checks
@@ -503,8 +503,8 @@ namespace ESolver {
             auto const& ExpectedName = FuncOp->GetMangledName();
             auto const&& ActualName = FuncOperatorBase::MangleName(OpInfo->GetName(), ArgTypes);
             if (ExpectedName != ActualName) {
-                throw TypeException((string)"Error in application of function \"" + OpInfo->GetName() + "\".\n" + 
-                                    "This could be due to mismatched numbers or types of parameters");
+                throw TypeException((string)"Error in application of function \"" + OpInfo->GetName() + "\".\n" +
+                        "This could be due to mismatched numbers or types of parameters");
             }
             // We're good. Create the expression
             if (OperatorBase::As<InterpretedFuncOperator>(OpInfo) != nullptr) {
@@ -515,8 +515,8 @@ namespace ESolver {
                                                      Children);
             }
         } else {
-            
-            // This could be a constant, a UQVariable, an aux variable, 
+
+            // This could be a constant, a UQVariable, an aux variable,
             // a formal param or a let bound variable
             if (OperatorBase::As<VarOperatorBase>(OpInfo) != nullptr) {
                 if (OperatorBase::As<UQVarOperator>(OpInfo) != nullptr) {
@@ -528,8 +528,8 @@ namespace ESolver {
                 } else if (OperatorBase::As<LetBoundVarOperator>(OpInfo) != nullptr) {
                     NewExp = new UserLetBoundVarExpression(OperatorBase::As<LetBoundVarOperator>(OpInfo));
                 } else {
-                    throw InternalError((string)"BUG: Unhandled operator type at " + __FILE__ + ":" + 
-                                        to_string(__LINE__));
+                    throw InternalError((string)"BUG: Unhandled operator type at " + __FILE__ + ":" +
+                            to_string(__LINE__));
                 }
             } else {
                 // This can only be a const operator now
@@ -540,13 +540,27 @@ namespace ESolver {
                     NewExp = new UserInterpretedFuncExpression(OperatorBase::As<MacroOperator>(OpInfo), Children);
                 } else {
                     throw TypeException((string)"Error: Could not find a meaningful way to construct " +
-                                        "an expression with operator having name \"" + OpInfo->GetName() + 
-                                        "\".\nPerhaps you provided arguments where none were expected, " + 
-                                        "or this could be a bug");
+                            "an expression with operator having name \"" + OpInfo->GetName() +
+                            "\".\nPerhaps you provided arguments where none were expected, " +
+                            "or this could be a bug");
                 }
             }
         }
+        return NewExp;
+    }
 
+    Expression ESolver::CreateNonmanagedExpression(const OperatorBase* OpInfo,
+                                                   const vector<Expression>& Children)
+    {
+        Expression NewExp = CreateRawExpression(OpInfo, Children);
+        UnmanagedExps.push_back(NewExp);
+        return NewExp;
+    }
+
+    Expression ESolver::CreateExpression(const OperatorBase* OpInfo,
+                                         const vector<Expression>& Children)
+    {
+        Expression NewExp = CreateRawExpression(OpInfo, Children);
         ExpMgr->GC();
         return ExpMgr->GetExp(NewExp);
     }

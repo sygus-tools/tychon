@@ -59,25 +59,25 @@ namespace ESolver {
     }
 
     bool DecisionTreeExprBuilder::LocateNextEvalNode(DecisionTreeNodeLocation& NodeLocation,
-                                                     DTBuilderCurEvals& CurEvalPtrs)
+                                                     DTBuilderCurEvals& Evals)
     {
         if (m_TreeNodes.empty()) {
             m_QueueIdx = 2;
-            CurEvalPtrs.first = m_EvalsQueue[0];
-            CurEvalPtrs.second = m_EvalsQueue[1];
+            Evals.first = m_EvalsQueue[0];
+            Evals.second = m_EvalsQueue[1];
             return true;
         }
         if (m_QueueIdx < m_EvalsQueue.size()) {
-            CurEvalPtrs.first = m_EvalsQueue[m_QueueIdx];
+            Evals.first = m_EvalsQueue[m_QueueIdx];
             DecisionTreeNodeLocator::Do(&(*m_TreeNodes.begin()),
-                                        CurEvalPtrs.first,
+                                        Evals.first,
                                         NodeLocation);
-            CurEvalPtrs.second = NodeLocation.GetActiveEval();
+            Evals.second = NodeLocation.GetActiveEval();
             m_QueueIdx++;
             return true;
         }
-        CurEvalPtrs.first = nullptr;
-        CurEvalPtrs.second = nullptr;
+        Evals.first = nullptr;
+        Evals.second = nullptr;
         return false;
     }
 
@@ -85,9 +85,9 @@ namespace ESolver {
     {
         m_QueueIdx = 0;
         vector<const ESFixedTypeBase*> FuncDomain(3, Type);
-        m_ConditionExprOp = OperatorBase::As<InterpretedFuncOperator>
+        m_CondExprOp = OperatorBase::As<InterpretedFuncOperator>
                 (m_Solver->LookupOperator(m_ConditionOpName, FuncDomain));
-        if (m_ConditionExprOp == nullptr) {
+        if (m_CondExprOp == nullptr) {
             throw InternalError(
                     (string) "Could not locate <if0> conditional grammar!" +
                             "\nAt: " + __FILE__ + ":" + to_string(__LINE__));
@@ -114,9 +114,10 @@ namespace ESolver {
                                                      vector<Expression>& NodeExprs)
     {
         if (m_TreeNodes.empty()) {
-            m_RootExpr = m_Solver->CreateExpression(m_ConditionExprOp, NodeExprs);
+            m_RootExpr = m_Solver->CreateNonmanagedExpression(m_CondExprOp, NodeExprs);
             m_TreeNodes.emplace_back(DecisionTreeNode(m_RootExpr, Evals.first, Evals.second));
-
+            NodeLocation.Node = &(m_TreeNodes.front());
+            NodeLocation.ValidCondition = true;
         } else {
             auto SharedNodes = m_SharedDecisionNodes.equal_range(NodeLocation);
             for (auto It = SharedNodes.first; It != SharedNodes.second; ++It) {
@@ -127,14 +128,12 @@ namespace ESolver {
             }
 
             // Place node in tree
-            auto ChildExpr = m_Solver->CreateExpression(m_ConditionExprOp, NodeExprs);
+            auto ChildExpr = m_Solver->CreateNonmanagedExpression(m_CondExprOp, NodeExprs);
             m_TreeNodes.emplace_back(DecisionTreeNode(ChildExpr, Evals.first, Evals.second));
             if (NodeLocation.ValidCondition) {
-                auto& LastNode = m_TreeNodes.back();
-                NodeLocation.Node->SetThenBranch(&LastNode, ChildExpr);
+                NodeLocation.Node->SetThenBranch(&(m_TreeNodes.back()), ChildExpr);
             } else {
-                auto& LastNode = m_TreeNodes.back();
-                NodeLocation.Node->SetElseBranch(&LastNode, ChildExpr);
+                NodeLocation.Node->SetElseBranch(&(m_TreeNodes.back()), ChildExpr);
             }
         }
     }

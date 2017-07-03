@@ -24,7 +24,7 @@ namespace ESolver {
         uint32 m_QueueIdx;
         ESolver* m_Solver;
         Expression m_RootExpr;
-        const InterpretedFuncOperator* m_ConditionExprOp;
+        const InterpretedFuncOperator* m_CondExprOp;
         // XXX: WARNING competition hack here!
         const std::string m_ConditionOpName = "if0";
         std::list<DecisionTreeNode> m_TreeNodes;
@@ -51,7 +51,7 @@ namespace ESolver {
 
         void Initialize(const ESFixedTypeBase* Type);
         bool LocateNextEvalNode(DecisionTreeNodeLocation& NodeLocation,
-                                DTBuilderCurEvals& CurEvalPtrs);
+                                DTBuilderCurEvals& Evals);
         void InsertDecisionNode(DecisionTreeNodeLocation& NodeLocation,
                                 DTBuilderCurEvals& Evals,
                                 vector<Expression>& NodeExprs);

@@ -308,9 +308,8 @@ namespace ESolver {
                 DecisionExprs = {GenExpressionBase::ToUserExpression(Exp, this),
                                  PBETermExprs[ThenExprIdx],
                                  PBETermExprs[ElseExprIdx]};
-        DTBuilder.InsertDecisionNode(DTCurLocation,
-                                     DTCurEvalPtrs,
-                                     DecisionExprs);
+        DTBuilder.InsertDecisionNode(DTCurLocation, DTCurEvalPtrs, DecisionExprs);
+
         if (Opts.StatsLevel >= 4) {
             TheLogger.Log4("Unique node: ").Log4(DecisionExprs[0]);
             TheLogger.Log4(", Then:").Log4(DecisionExprs[1]);

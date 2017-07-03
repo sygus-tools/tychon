@@ -86,6 +86,7 @@ namespace ESolver {
         ValueManager* ValMgr;
         ScopeManager* ScopeMgr;
         ExprManager* ExpMgr;
+        std::vector<Expression> UnmanagedExps;
         ConstManager* ConstMgr;
         TypeManager* TypeMgr;
 
@@ -215,6 +216,12 @@ namespace ESolver {
         // Expression creation methods
         Expression CreateExpression(const OperatorBase* Op,
                                     const vector<Expression>& Children);
+
+        Expression CreateRawExpression(const OperatorBase* OpInfo,
+                                       const vector<Expression>& Children);
+
+        Expression CreateNonmanagedExpression(const OperatorBase* OpInfo,
+                                              const vector<Expression>& Children);
 
         Expression CreateExpression(const string& OperatorName,
                                     const vector<Expression>& Children);

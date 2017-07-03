@@ -30,7 +30,7 @@ namespace ESolver {
 
     const UserExpressionBase* DecisionTreeNode::GetExpr() const
     {
-        return m_Expr;
+        return m_Expr.GetPtr();
     }
 
     const UserExpressionBase* DecisionTreeNode::GetConditionExpr() const
@@ -48,8 +48,7 @@ namespace ESolver {
         return m_Expr->GetChildren()[2].GetPtr();
     }
 
-    void DecisionTreeNode::SetThenBranch(DecisionTreeNode* Node,
-                                         Expression Expr)
+    void DecisionTreeNode::SetThenBranch(DecisionTreeNode* Node, Expression Expr)
     {
         m_ThenNode = Node;
         auto ExpPtr =
@@ -58,8 +57,7 @@ namespace ESolver {
         ExpPtr->SetChildAt(1, Expr);
     }
 
-    void DecisionTreeNode::SetElseBranch(DecisionTreeNode* Node,
-                                         Expression Expr)
+    void DecisionTreeNode::SetElseBranch(DecisionTreeNode* Node, Expression Expr)
     {
         m_ElseNode = Node;
         auto ExpPtr =
