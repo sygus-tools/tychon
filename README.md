@@ -4,8 +4,10 @@ An enumerative SyGuS solver for programming-by-example (PBE).
 
 ## Overview
 
-Tychon (currently e2solver) builds on the original enumerative [solver] and
-contributes several fixes and features. Our main addition is an optimized mode for programming-by-example.
+Tychon (currently e3solver) builds on the original enumerative [solver] and
+contributes several features. Our main addition is an optimized mode for 
+programming-by-example. In this mode, we use decision tree unification in order 
+to incrementally find an expression consistent with all examples.
 
 ## Structure
 
