@@ -117,7 +117,8 @@ set(tychon_source_files
   src/visitors/PBEConsequentsInitializer.cpp
   src/visitors/DecisionTreeNodeLocator.cpp
   src/solverutils/DecisionTreeExprBuilder.cpp
-  src/solverutils/DecisionTreeNode.cpp)
+  src/solverutils/DecisionTreeNode.cpp
+  src/visitors/ExpressionSizeCounter.cpp)
 
 set(main_source_file src/main/ESolverSynthLib.cpp)
 

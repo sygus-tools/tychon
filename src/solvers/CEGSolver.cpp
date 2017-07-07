@@ -53,6 +53,7 @@
 #include "../visitors/SpecRewriter.hpp"
 #include "../visitors/Gatherers.hpp"
 #include "../visitors/PBEConsequentsInitializer.hpp"
+#include "../visitors/ExpressionSizeCounter.hpp"
 
 
 namespace ESolver {
@@ -406,7 +407,7 @@ namespace ESolver {
         }
 
         if (Opts.StatsLevel >= 2) {
-            TheLogger.Log2("Found expression for example [").Log2(CurEvalIdx).Log2("]\n");
+            TheLogger.Log2("Found terminal expression for example [").Log2(CurEvalIdx).Log2("]\n");
         }
 
         // valid terminal expr was found for this example, keep it
@@ -663,6 +664,10 @@ namespace ESolver {
             ResourceLimitManager::GetUsage(Time, Memory);
             TheLogger.Log1("Total Time : ").Log1(Time).Log1(" seconds.\n");
             TheLogger.Log1("Peak Memory: ").Log1(Memory).Log1(" MB.\n");
+            if (Solutions.size() > 0) {
+                const auto ExprSize = ExpressionSizeCounter::Do(Solutions[0][0].second);
+                TheLogger.Log1("Solution Size: ").Log1(ExprSize).Log1(".\n");
+            }
         }
 
         EndSolve();
