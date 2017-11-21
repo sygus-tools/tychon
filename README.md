@@ -5,9 +5,12 @@ An enumerative SyGuS solver for programming-by-example (PBE).
 ## Overview
 
 Tychon (currently e3solver) builds on the original enumerative [solver] and
-contributes several features. Our main addition is an optimized mode for 
-programming-by-example. In this mode, we use decision tree unification in order 
+contributes several features. Our main addition is an optimized mode for
+programming-by-example. In this mode, we use decision tree unification in order
 to incrementally find an expression consistent with all examples.
+
+More details can be found in this [report](https://blog.formallyapplied.com/docs/sygus17.pdf)
+and [slides](https://www.react.uni-saarland.de/synt2017/Talks/SyGuSComp17_E3Solver.pdf).
 
 ## Structure
 
